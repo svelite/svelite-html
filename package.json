@@ -1,5 +1,5 @@
 {
-  "name": "html",
+  "name": "svelite-html",
   "bin": {
     "svelite": "bin/svelite.js"
   },
