@@ -1,0 +1,16 @@
+<h1>{{ items | json }}</h1>
+
+
+<script server>
+	async function load(props) {
+
+		return {
+			items: Array.from({ length: props.count }).map((x, i) => i + 1)
+		}
+	}
+
+</script>
+
+<script>
+	console.log('mounted on browser', document.querySelector('h1').textContent);
+</script>

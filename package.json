@@ -1,0 +1,21 @@
+{
+  "name": "html",
+  "bin": {
+    "svelite": "bin/svelite.js"
+  },
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.3",
+    "liquidjs": "^10.10.1",
+    "tailwindcss": "^3.4.1"
+  }
+}

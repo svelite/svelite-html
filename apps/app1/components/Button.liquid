@@ -1,0 +1,32 @@
+{% comment %}
+Usage: 
+{% include 'button' with color: 'primary', size: 'medium', text: 'Click me' %}
+{% endcomment %}
+
+{% capture buttonClasses %}
+    w-full px-3 py-2.5 text-sm border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline
+    {% if size == 'small' %}
+        px-3 py-2 text-xs
+    {% elsif size == 'large' %}
+        px-3 py-3 text-base
+    {% endif %}
+    {% if color == 'primary' %}
+        btn-blue-500
+    {% elsif color == 'secondary' %}
+        btn-gray-500
+    {% elsif color == 'success' %}
+        btn-green-500
+    {% elsif color == 'danger' %}
+        btn-red-500
+    {% elsif color == 'warning' %}
+        btn-yellow-500
+    {% elsif color == 'info' %}
+        btn-cyan-500
+    {% elsif color == 'light' %}
+        btn-gray-200 text-black
+    {% elsif color == 'dark' %}
+        btn-gray-800 text-white
+    {% endif %}
+{% endcapture %}
+
+<button class="{{ buttonClasses }}">{{ text }}</button>

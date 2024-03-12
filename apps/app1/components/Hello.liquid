@@ -1,0 +1,8 @@
+<h1>Hello {{slug}}</h1>
+
+
+<script server>
+    async function load({ params }) {
+        return { slug: params[0] }
+    }
+</script>

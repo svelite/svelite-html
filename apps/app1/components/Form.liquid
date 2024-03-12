@@ -1,0 +1,48 @@
+{% layout 'Main' %}
+<form id="myForm" action="POST">
+    <div class="mb-4">
+        <label for="title" class="block text-gray-700 font-bold mb-2">Title:</label>
+        <input type="text" name="title" id="title" value="{{value.title}}"
+            class="w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+    </div>
+    <div class="mb-4">
+        <label for="slug" class="block text-gray-700 font-bold mb-2">Slug:</label>
+        <input type="text" name="slug" id="slug" value="{{value.slug}}"
+            class="w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+    </div>
+    <div class="mb-4">
+        <label for="description" class="block text-gray-700 font-bold mb-2">Description:</label>
+        <textarea name="description" id="description"
+            class="w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline">{{value.description}}</textarea>
+    </div>
+    <div class="mb-4">
+        {% include 'Button' with color: 'primary', size: 'medium', text: 'Click me' %}
+    </div>
+</form>
+
+{{value | json}}
+{% block script %}
+<script>
+    myForm.onsubmit = (e) => {
+        e.preventDefault()
+        const value = {
+            description: description.value,
+            slug: slug.value,
+            title: title.value,
+        }
+
+        fetch('http://localhost:3000/api/test2', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(value)}).then(res => res.json())
+        console.log('submitted')
+        
+        location.reload()
+    }
+</script>
+{% endblock %}
+
+<script server>
+    async function load() {
+        return {
+            value: fetch('http://localhost:3000/api/test', {method: 'POST', body: "{}"}).then(res => res.json())
+        }
+    }
+</script>
