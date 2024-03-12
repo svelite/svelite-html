@@ -61,7 +61,7 @@ async function parse(filename) {
 }
 
 async function renderPage(page, { params, url, query }) {
-	let head;
+	let head = '';
 
 	if (config.config?.tailwindcss) {
 		head = buildcss().then(css => `<style>${css}</style>`)
