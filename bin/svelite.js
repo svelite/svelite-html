@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import express from 'express'
+import cookieParser from 'cookie-parser'
 import path from 'path'
 import { readFile } from 'fs/promises'
 import { Liquid } from 'liquidjs';
@@ -26,8 +27,9 @@ var engine = new Liquid({
 });
 
 const app = express()
-
+app.use(cookieParser())
 app.use(express.json())
+
 let config = await import(path.resolve('./app.config.js')).then(res => res.default)
 
 if (!config.config) {
@@ -68,7 +70,7 @@ async function renderPage(page, { params, url, query }) {
 	}
 
 	function api(path) {
-		const baseUrl = 'localhost:3000';
+		const baseUrl = 'http://localhost:3000';
 
 		return {
 			async post(data, headers = {}) {
