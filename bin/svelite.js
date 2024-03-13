@@ -74,7 +74,7 @@ async function renderPage(page, { params, url, query }) {
 
 		return {
 			async post(data, headers = {}) {
-				return fetch(baseUrl + '/' + path, {
+				return fetch(baseUrl + path, {
 					method: 'POST', headers: {
 						'Content-Type': 'application/json',
 						...headers
