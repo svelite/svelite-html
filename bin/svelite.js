@@ -45,6 +45,17 @@ if (!config.config.layouts) {
 	config.config.layouts = './layouts'
 }
 
+if(!config.ctx) {
+	config.ctx = {}
+}
+
+app.use((req, res, next) => {
+	for(let key in config.ctx) {
+		req[key] = config.ctx[key]
+	}
+	return next
+})
+
 async function parse(filename) {
 	const file = await readFile(filename, 'utf-8')
 	const serverRegex = /<script server>([\s\S]*?)<\/script>/;
