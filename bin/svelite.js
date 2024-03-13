@@ -139,9 +139,29 @@ const template = `<!DOCTYPE html>
 </head>
 <body>
     <!--body-->
+
 </body>
 </html>`
 
+const script = `
+window.svelite = {
+	api(path) {
+		return {
+			async post(data, headers = {}) {
+
+				return fetch(window.location.href + path, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						...headers
+					},
+					body: JSON.stringify(data)
+				}).then(res => res.json())
+			}
+		}
+	}
+}
+`
 
 function registerPage(page) {
 	app.get(page.slug, async (req, res) => {
@@ -153,7 +173,7 @@ function registerPage(page) {
 		const { head, html } = await renderPage(page, { url, params, query })
 
 		res.writeHead(200, '', { 'Content-Type': 'text/html' })
-		return res.end(template.replace('<!--body-->', html).replace('<!--head-->', head))
+		return res.end(template.replace('<!--body-->', html + `<script>${script}</script>`).replace('<!--head-->', head))
 	})
 }
 
