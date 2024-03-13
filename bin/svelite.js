@@ -29,6 +29,7 @@ var engine = new Liquid({
 const app = express()
 app.use(cookieParser())
 app.use(express.json())
+app.use(express.urlencoded({extended: true}))
 
 let config = await import(path.resolve('./app.config.js')).then(res => res.default)
 
@@ -198,7 +199,7 @@ for (let page of config.pages) {
 
 app.use(async (req, res, next) => {
 	console.log(req.url)
-	const slugs = req.url.split('/').slice(1)
+	const slugs = req.url.split('?')[0].split('/').slice(1)
 
 
 	if (req.method === 'POST') {
