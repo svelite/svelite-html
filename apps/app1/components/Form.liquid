@@ -31,9 +31,9 @@
             title: title.value,
         }
 
-        fetch('http://localhost:3000/api/test2', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(value)}).then(res => res.json())
+        fetch('http://localhost:3000/api/test2', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) }).then(res => res.json())
         console.log('submitted')
-        
+
         location.reload()
     }
 </script>
@@ -42,7 +42,7 @@
 <script server>
     async function load() {
         return {
-            value: fetch('http://localhost:3000/api/test', {method: 'POST', body: "{}"}).then(res => res.json())
+            value: fetch('http://localhost:3000/api/test', { method: 'POST', body: "{}" }).then(res => res.json())
         }
     }
 </script>

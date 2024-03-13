@@ -12,9 +12,9 @@ async function buildcss() {
 		tailwindcss({
 			content: ['./**/*.liquid']
 		})
-	]).process('@tailwind base;\n@tailwind components;\n@tailwind utilities;').then(res => {
-
-		console.log(res)
+	]).process(`@tailwind base;
+@tailwind components;
+@tailwind utilities;`).then(res => {
 		return res.css
 	})
 }
@@ -22,7 +22,7 @@ async function buildcss() {
 var engine = new Liquid({
 	extname: '.liquid',
 	partials: path.resolve('./components'),
-	layouts: path.resolve('./layouts')
+	// layouts: path.resolve('./layouts'),
 });
 
 const app = express()
@@ -61,27 +61,72 @@ async function parse(filename) {
 }
 
 async function renderPage(page, { params, url, query }) {
-	let head = '';
+	let head = Promise.resolve(() => '');
 
 	if (config.config?.tailwindcss) {
 		head = buildcss().then(css => `<style>${css}</style>`)
 	}
-	let result = page.map(async x => {
 
-		let filename = path.resolve(path.join(config.config.components, x.name + '.liquid'))
+	function api(path) {
+		const baseUrl = 'localhost:3000';
 
-		const { template, load } = await parse(filename)
+		return {
+			async post(data, headers = {}) {
+				return fetch(baseUrl + '/' + path, {
+					method: 'POST', headers: {
+						'Content-Type': 'application/json',
+						...headers
+					}, body: JSON.stringify(data)
+				}).then(res => res.json())
+			}
+		}
+	}
 
-		if (!x.props) x.props = {}
+	async function renderPageContent(content) {
+		let result = content.map(async x => {
+			console.log({ x })
+
+			let filename = path.resolve(path.join(config.config.components, x.name + '.liquid'))
+
+			const { template, load } = await parse(filename)
+
+			if (!x.props) x.props = {}
+			if (load) {
+				const loadParams = {
+					props: x.props, params, url, query, api
+				}
+
+				const props = await load(loadParams)
+				x.props = { ...x.props, ...props }
+			}
+
+			return engine.parseAndRender(template, x.props)
+		})
+
+		return (await Promise.all(result)).join('')
+	}
+
+	if (page.layout) {
+		const { template, load } = parse(path.resolve(path.join((config.config.layouts, page.layout.name + '.liquid'))))
+		if (!page.layout.props) page.layout.props = {}
+
 		if (load) {
-			const props = await load({ props: x.props, params, url, query })
-			x.props = { ...x.props, ...props }
+			const loadParams = {
+				props: page.layout.props, params, url, query, api
+			}
+
+			const props = await load(loadParams)
+			page.layout.props = { ...x.props, ...props }
 		}
 
-		return engine.parseAndRender(template, x.props)
-	})
+		page.layout.props.content = await renderPageContent(page.content)
+		const res = engine.parseAndRender(template, page.layout.props)
 
-	return { html: (await Promise.all(result)).join(''), head: await head }
+		return { html: res, head: await head }
+	}
+
+	return { html: renderPageContent(page.content), head: await head }
+
 }
 
 const template = `<!DOCTYPE html>
@@ -97,31 +142,29 @@ const template = `<!DOCTYPE html>
 </html>`
 
 
-function registerPage(page, slug) {
-	console.log('registerPage', page, slug)
-	if (!Array.isArray(page) && typeof page == 'object') {
-		for (let key in page) {
-			registerPage(page[key], slug + '/' + key)
-		}
-	}
-	if (Array.isArray(page)) {
-		app.get(slug, async (req, res) => {
+function registerPage(page) {
+	// console.log('registerPage', page, slug)
+	// if (!Array.isArray(page) && typeof page == 'object') {
+	// 	for (let key in page) {
+	// 		registerPage(page[key], slug + '/' + key)
+	// 	}
+	// }
+	app.get(page.slug, async (req, res) => {
 
-			const params = req.params
-			const query = req.query
-			const url = req.url
+		const params = req.params
+		const query = req.query
+		const url = req.url
 
-			const { head, html } = await renderPage(page, { url, params, query })
+		const { head, html } = await renderPage(page, { url, params, query })
 
-			res.writeHead(200, '', { 'Content-Type': 'text/html' })
-			return res.end(template.replace('<!--body-->', html).replace('<!--head-->', head))
-		})
-	}
+		res.writeHead(200, '', { 'Content-Type': 'text/html' })
+		return res.end(template.replace('<!--body-->', html).replace('<!--head-->', head))
+	})
 }
 
 console.log(config.pages)
-for (let page in config.pages) {
-	registerPage(config.pages[page], '/' + page)
+for (let page of config.pages) {
+	registerPage(page)
 }
 
 app.use(async (req, res, next) => {
