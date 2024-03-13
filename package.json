@@ -3,7 +3,7 @@
   "bin": {
     "svelite": "bin/svelite.js"
   },
-  "version": "1.0.1-next.1",
+  "version": "1.0.1-next.2",
   "description": "",
   "main": "index.js",
   "type": "module",
