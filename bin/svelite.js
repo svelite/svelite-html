@@ -107,7 +107,8 @@ async function renderPage(page, { params, url, query }) {
 	}
 
 	if (page.layout) {
-		const { template, load } = parse(path.resolve(path.join((config.config.layouts, page.layout.name + '.liquid'))))
+		console.log('loading layout: ', page.layout)
+		const { template, load } = parse(path.resolve(path.join(config.config.layouts, page.layout.name + '.liquid')))
 		if (!page.layout.props) page.layout.props = {}
 
 		if (load) {
@@ -116,7 +117,7 @@ async function renderPage(page, { params, url, query }) {
 			}
 
 			const props = await load(loadParams)
-			page.layout.props = { ...x.props, ...props }
+			page.layout.props = { ...page.layout.props, ...props }
 		}
 
 		page.layout.props.content = await renderPageContent(page.content)
@@ -143,12 +144,6 @@ const template = `<!DOCTYPE html>
 
 
 function registerPage(page) {
-	// console.log('registerPage', page, slug)
-	// if (!Array.isArray(page) && typeof page == 'object') {
-	// 	for (let key in page) {
-	// 		registerPage(page[key], slug + '/' + key)
-	// 	}
-	// }
 	app.get(page.slug, async (req, res) => {
 
 		const params = req.params
