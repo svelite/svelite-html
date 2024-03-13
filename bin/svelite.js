@@ -62,7 +62,7 @@ async function parse(filename) {
 	}
 }
 
-async function renderPage(page, { params, url, query }) {
+async function renderPage(page, { params, url, query, cookies }) {
 	let head = Promise.resolve(() => '');
 
 	if (config.config?.tailwindcss) {
@@ -95,7 +95,7 @@ async function renderPage(page, { params, url, query }) {
 			if (!x.props) x.props = {}
 			if (load) {
 				const loadParams = {
-					props: x.props, params, url, query, api
+					props: x.props, params, url, query, api, cookies
 				}
 
 				const props = await load(loadParams)
@@ -115,7 +115,7 @@ async function renderPage(page, { params, url, query }) {
 
 		if (load) {
 			const loadParams = {
-				props: page.layout.props, params, url, query, api
+				props: page.layout.props, params, url, query, api, cookies
 			}
 
 			const props = await load(loadParams)
@@ -171,8 +171,9 @@ function registerPage(page) {
 		const params = req.params
 		const query = req.query
 		const url = req.url
+		const cookies = req.cookies
 
-		const { head, html } = await renderPage(page, { url, params, query })
+		const { head, html } = await renderPage(page, { url, params, query, cookies })
 
 		res.writeHead(200, '', { 'Content-Type': 'text/html' })
 		return res.end(template.replace('<!--body-->', html + `<script>${script}</script>`).replace('<!--head-->', head))
@@ -187,8 +188,6 @@ for (let page of config.pages) {
 app.use(async (req, res, next) => {
 	console.log(req.url)
 	const slugs = req.url.split('/').slice(1)
-
-
 
 
 	if (req.method === 'POST') {
