@@ -108,7 +108,7 @@ async function renderPage(page, { params, url, query }) {
 
 	if (page.layout) {
 		console.log('loading layout: ', page.layout)
-		const { template, load } = parse(path.resolve(path.join(config.config.layouts, page.layout.name + '.liquid')))
+		const { template, load } = await parse(path.resolve(path.join(config.config.layouts, page.layout.name + '.liquid')))
 		if (!page.layout.props) page.layout.props = {}
 
 		if (load) {
@@ -121,12 +121,12 @@ async function renderPage(page, { params, url, query }) {
 		}
 
 		page.layout.props.content = await renderPageContent(page.content)
-		const res = engine.parseAndRender(template, page.layout.props)
+		const res = await engine.parseAndRender(template, page.layout.props)
 
 		return { html: res, head: await head }
 	}
 
-	return { html: renderPageContent(page.content), head: await head }
+	return { html: await renderPageContent(page.content), head: await head }
 
 }
 
@@ -149,7 +149,7 @@ window.svelite = {
 		return {
 			async post(data, headers = {}) {
 
-				return fetch(window.location.href + path, {
+				return fetch(window.location.href + path.slice(1), {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
