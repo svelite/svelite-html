@@ -10,15 +10,15 @@ function crud(config) {
 
             let payload = {}
 
-            for(let field in config.fields) {
+            for (let field in config.fields) {
                 // validate
-                if(body[field]) {
+                if (body[field]) {
                     payload[field] = body[field]
-                }   
+                }
             }
-            
+
             console.log('payload: ', payload)
-            return res.json({insert: payload})
+            return res.json({ insert: payload })
 
         },
         update(req, res) {
@@ -53,22 +53,124 @@ export default {
             test2(req, res) {
                 value = req.body
                 console.log('value: ', value)
-                res.json({success: true})
+                res.json({ success: true })
             },
-            users: crud({fields: {name: 'string', password: 'string'}})
+            users: crud({ fields: { name: 'string', password: 'string' } })
         }
     },
-    pages: {
-        '': [
-            { name: 'Hello', props: { name: 'hadi' } },
-            { name: 'Script', props: { count: 50 } },
-        ],
-        form: [
-            { name: 'Form' }
-        ],
-        '*': [
-            { name: 'Hello', props: { name: 'hadi' } },
+    // pages: [
+    //     {
+    //         slug: '/', content: [
+    //             { name: 'Hello', props: { name: 'hadi' } },
+    //             { name: 'Script', props: { count: 50 } },
+    //         ]
+    //     },
+    //     {
+    //         slug: '/form',
+    //         layout: { name: 'Main' },
+    //         content: [
+    //             { name: 'Form' }
+    //         ],
+    //     },
+    //     {
+    //         slug: '/table',
+    //         layout: { name: 'Main' },
+    //         content: [
+    //             { name: 'Table' }
+    //         ]
+    //     },
+    //     {
+    //         slug: '/page',
+    //         layout: { name: 'Main' },
+    //         content: [
+    //             {
+    //                 name: 'Page',
+    //                 props: {
+    //                     content: [{ name: 'Form' }],
+    //                     action: [{ name: 'Button', props: {} }]
+    //                 }
+    //             }
+    //         ]
+    //     },
+    //     {
+    //         slug: '/*', content: [
+    //             { name: 'Hello', props: { name: 'hadi' } },
+    //         ]
+    //     }
+    // ],
 
-        ]
-    }
+    // pages2: {
+    //     slug: '/',
+    //     layout: 'Main',
+    //     pages: [
+    //         {
+    //             slug: '/test',
+    //             content: [
+    //                 {
+    //                     name: 'Page',
+    //                     props: {
+    //                         content: [
+    //                             {}
+    //                         ]
+    //                     },
+    //                     slots: {
+    //                         content: [
+    //                             {}
+    //                         ]
+    //                     }
+    //                 }
+    //             ]
+    //         }
+    //     ]
+    // },
+
+    pages: [
+        {
+            slug: '/admin/users',
+            layouts: [
+                { name: 'Main' },
+                { name: 'Page', props: {title: 'Table'} }
+            ],
+            content: [
+                { name: 'PageHeader', props: { title: 'Table' } },
+                {
+                    name: 'Table'
+                }
+            ]
+        },
+        {
+            slug: '/admin/users/insert',
+            layouts: [
+                { name: 'Main' },
+                { name: 'Page' }
+            ],
+            content: [
+                { name: 'PageHeader', props: { title: 'Form', actions: '<h1 class="font-bold text-red-700">SSS</h1>' } },
+                {
+                    name: 'Form'
+                }
+            ]
+        }
+    ]
 }
+
+// function page(config) {
+//     return {
+//         slug: config.slug
+//     }
+// }
+// page.group = function (config, cb) {
+
+// }
+/*
+
+page.group({layout: 'Main', slug: '/'}, () => {
+    page({
+        slug: '/test', 
+        content: [
+            
+        ]
+    })
+})
+
+*/

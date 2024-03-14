@@ -1,10 +1,5 @@
-{% layout 'Main' %}
-<form id="myForm" action="POST">
-    <div class="mb-4">
-        <label for="title" class="block text-gray-700 font-bold mb-2">Title:</label>
-        <input type="text" name="title" id="title" value="{{value.title}}"
-            class="w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-    </div>
+<form id="myForm" action="/" method="post">
+    {%  "FormInput" with name: 'title', id: 'title', label: 'Title' %}
     <div class="mb-4">
         <label for="slug" class="block text-gray-700 font-bold mb-2">Slug:</label>
         <input type="text" name="slug" id="slug" value="{{value.slug}}"
@@ -16,33 +11,40 @@
             class="w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline">{{value.description}}</textarea>
     </div>
     <div class="mb-4">
-        {% include 'Button' with color: 'primary', size: 'medium', text: 'Click me' %}
+        
+        <button class="w-full px-3 py-2.5 text-sm border bg-blue-500 rounded-md text-white leading-tight focus:outline-none focus:shadow-outline">Submit</button>
+        
     </div>
 </form>
 
-{{value | json}}
+{{ value | json }}
 {% block script %}
 <script>
-    myForm.onsubmit = (e) => {
-        e.preventDefault()
-        const value = {
-            description: description.value,
-            slug: slug.value,
-            title: title.value,
+
+    onMount(({api}) => {
+        myForm.onsubmit = async (e) => {
+            e.preventDefault()
+            const value = {
+                description: description.value,
+                slug: slug.value,
+                title: title.value,
+            }
+
+            await api('/api/test2').post(value)
+
+            console.log('submitted')
+
+            location.reload()
         }
+    })
 
-        fetch('http://localhost:3000/api/test2', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) }).then(res => res.json())
-        console.log('submitted')
-
-        location.reload()
-    }
 </script>
 {% endblock %}
 
 <script server>
-    async function load() {
+    async function load({api}) {
         return {
-            value: fetch('http://localhost:3000/api/test', { method: 'POST', body: "{}" }).then(res => res.json())
+            value: api('/api/test').post({})
         }
     }
 </script>

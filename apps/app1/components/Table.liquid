@@ -1,0 +1,31 @@
+<div class="overflow-x-auto">
+    <table class="border-t w-full border-x">
+        <thead class="border-b">
+            <tr class="bg-blue-100">
+                <th class="py-2 px-4 text-start">Id</th>
+                <th class="py-2 px-4 text-start">Name</th>
+                <th class="py-2 px-4 text-start">Username</th>
+                <th class="py-2 px-4 text-start">Email</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white">
+            {% for item in items %}
+            <tr class="border-b">
+                <th class="py-2 px-4 text-start">id {{item}}</th>
+                <th class="py-2 px-4 text-start">name {{item}}</th>
+                <th class="py-2 px-4 text-start">username{{item}}</th>
+                <th class="py-2 px-4 text-start">email{{item}}@gmail.com</th>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script server>
+    async function load() {
+        return {
+            items: [1, 2, 3]
+        }
+    }
+
+</script>

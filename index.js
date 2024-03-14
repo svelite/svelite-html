@@ -9,7 +9,7 @@ import tailwindcss from 'tailwindcss'
 async function buildcss(config) {
     return postcss([
         tailwindcss({
-            content: ['./**/*.liquid']
+            content: ['./**/*.liquid', './app.config.js']
         })
     ]).process(`@tailwind base;
 @tailwind components;
@@ -38,7 +38,7 @@ function normalizeConfig(config) {
 
     if (!config.ctx) {
         config.ctx = {}
-    }
+    }   
 }
 
 function ctxMiddleware(ctx) {
@@ -68,6 +68,8 @@ async function parseLiquid(filename) {
 }
 
 async function renderPage(page, loadParams, config) {
+    // layout, slug, content | children
+    
     let head = Promise.resolve(() => '');
 
 
@@ -118,26 +120,35 @@ async function renderPage(page, loadParams, config) {
         return (await Promise.all(result)).join('')
     }
 
-    if (page.layout) {
-        console.log('loading layout: ', page.layout)
-        const { template, load } = await parseLiquid(path.resolve(path.join(config.config.layouts, page.layout.name + '.liquid')))
-        if (!page.layout.props) page.layout.props = {}
+    async function renderPageLayout(layout, content) {
+        console.log('loading layout: ', layout)
+        const { template, load } = await parseLiquid(path.resolve(path.join(config.config.layouts, layout.name + '.liquid')))
+        if (!layout.props) layout.props = {}
 
         if (load) {
-            loadParams.props = page.layout.props
+            loadParams.props = layout.props
             loadParams.api = api
 
             const props = await load(loadParams)
-            page.layout.props = { ...page.layout.props, ...props }
+            layout.props = { ...layout.props, ...props }
         }
 
-        page.layout.props.content = await renderPageContent(page.content)
-        const res = await engine.parseAndRender(template, page.layout.props)
+        layout.props.content = content
+        const res = await engine.parseAndRender(template, layout.props)
 
-        return { html: res, head: await head }
+        return res
+    }
+    
+    let html = ''
+    if (page.layouts) {
+        html = await renderPageContent(page.content);
+        for(let i=page.layouts.length; i>0; i--) {
+            html = await renderPageLayout(page.layouts[i-1], html)
+            console.log(page.layouts[i-1])
+        }
     }
 
-    return { html: await renderPageContent(page.content), head: await head }
+    return { html, head: await head }
 }
 
 const template = `<!DOCTYPE html>
@@ -159,7 +170,7 @@ window.svelite = {
 		return {
 			async post(data, headers = {}) {
 
-				return fetch(window.location.href + path.slice(1), {
+				return fetch(window.location.origin + path, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
@@ -170,6 +181,12 @@ window.svelite = {
 			}
 		}
 	}
+}
+
+window.onMount = (cb) => {
+    document.addEventListener('DOMContentLoaded', (ev) => {
+        cb({api: svelite.api}) /** add more */
+    })
 }
 `
 
@@ -198,8 +215,8 @@ function registerPage(page, config, router) {
         const { head, html } = await renderPage(page, { url, params, query, cookies, baseUrl }, config)
 
         const response = template
-            .replace('<!--body-->', html + `<script>${script}</script>`)
-            .replace('<!--head-->', head)
+            .replace('<!--body-->', html)
+            .replace('<!--head-->', head  + `<script>${script}</script>`)
 
         res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
         return res.end(response)
