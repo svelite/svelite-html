@@ -35,7 +35,7 @@ function normalizeConfig(config) {
     if(!config.middlewares) {
         config.middlewares = []
     }
-    
+
     if (!config.ctx) {
         config.ctx = {}
     }
@@ -81,7 +81,7 @@ async function renderPage(page, loadParams, config) {
     }
 
     function api(path) {
-        const baseUrl = 'http://localhost:3000';
+        const baseUrl = loadParams.baseUrl;
 
         return {
             async post(data, headers = {}) {
@@ -189,12 +189,13 @@ function registerPage(page, config, router) {
     router.get(page.slug, async (req, res) => {
         console.log('request page: ', req.url)
 
+        const baseUrl = new URL(req.protocol + '://' + req.headers.host + req.url).origin
         const params = req.params
         const query = req.query
         const url = req.url
         const cookies = req.cookies
 
-        const { head, html } = await renderPage(page, { url, params, query, cookies }, config)
+        const { head, html } = await renderPage(page, { url, params, query, cookies, baseUrl }, config)
 
         const response = template
             .replace('<!--body-->', html + `<script>${script}</script>`)
