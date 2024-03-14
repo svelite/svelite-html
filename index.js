@@ -222,7 +222,7 @@ function routesMiddleware(routes) {
     }
 }
 
-export async function runApp(config, port = 3000) {
+export function createApp(config) {
     normalizeConfig(config)
 
     const app = express()
@@ -243,6 +243,7 @@ export async function runApp(config, port = 3000) {
         res.end('404 Not found')
     })
 
-    const { PORT = port } = process.env
-    app.listen(PORT, () => console.log('listening on http://localhost:' + PORT))
+    return app
+    // const { PORT = port } = process.env
+    // app.listen(PORT, () => console.log('listening on http://localhost:' + PORT))
 }
