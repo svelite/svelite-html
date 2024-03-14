@@ -32,6 +32,10 @@ function normalizeConfig(config) {
         config.config.layouts = './layouts'
     }
 
+    if(!config.middlewares) {
+        config.middlewares = []
+    }
+    
     if (!config.ctx) {
         config.ctx = {}
     }
