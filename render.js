@@ -1,3 +1,7 @@
+import { readdir, readFile } from 'fs/promises'
+import path from 'path'
+
+
 function extractAttributes(templateString) {
     const attributesRegex = /(\w+)\s*=\s*"([^"]+)"|(\w+)\s*=\s*'([^']+)'/g;
     const attributes = {};
@@ -114,7 +118,8 @@ function renderTemplate(template, props, templateProps = {}) {
         } catch (err) {
             console.log(err.message)
         }
-
+    } else if (templateProps['this']) {
+        // 
     } else {
         template = renderVariables(template, props)
         return template
@@ -135,4 +140,79 @@ export function render(template, props) {
     }
 
     return template;
+}
+
+async function parse(filename) {
+    const file = await readFile(filename, 'utf-8')
+    const serverRegex = /<script server>([\s\S]*?)<\/script>/;
+
+    const serverScriptMatch = file.match(serverRegex);
+    const template = file.replace(serverRegex, '');
+
+    const serverScript = serverScriptMatch ? serverScriptMatch[1].trim() : null;
+
+    const load = eval('(' + serverScript + ')')
+
+    return {
+        template,
+        load
+    }
+}
+
+export default async function createEngine(config) {
+    const componentsPath = config.components
+    const components = (await readdir(componentsPath)).map(x => x.slice(0, x.length - 5))
+
+    return {
+        async render(component, loadProps) {
+            console.log("render", component )
+            const { template, load } = await parse(path.join(componentsPath, component.name + '.html'))
+
+            const props = component.props ?? {}
+            if(!props['content'] && component.content) {
+                props.content = component.content
+            }
+
+            if (load) {
+                loadProps.props = props
+
+                const newProps = await load(loadProps)
+                props = { ...props, ...newProps }
+            }
+
+            let rendered = render(template, props)
+
+            for (let key in props) {
+
+                if (props[key] && typeof props[key] === 'object' && Array.isArray(props[key]) && props[key].length > 0 && props[key][0].name && components.includes(props[key][0].name)) {
+                    let res = ''
+                    for (let item of props[key]) {
+                        res += await this.render(item, loadProps)
+                    }
+
+                    rendered = rendered.replace(`<slot name="${key}">`, res)
+                }
+            }
+
+            // Handle slot and componets
+            for (let i = 0; i < rendered.length; i++) {
+                if (rendered[i] === '<' && rendered[i + 1] >= 'A' && rendered[i + 1] <= 'Z') {
+                    const start = rendered.slice(i + 1).indexOf(' ');
+                    const end = rendered.indexOf('/>')
+                    const props = extractAttributes(rendered.slice(start, end))
+
+                    const name = rendered.slice(i + 1, i + 1 + start)
+
+                    const { template } = await parse(path.join(componentsPath, name + '.html'))
+
+                    const res = render(template, props)
+
+                    rendered = rendered.slice(0, i) + res + rendered.slice(end + 2)
+                }
+
+            }
+
+            return rendered
+        }
+    }
 }

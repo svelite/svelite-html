@@ -1,15 +1,15 @@
 import express from 'express'
 import cookieParser from 'cookie-parser'
 import path from 'path'
-import { readFile } from 'fs/promises'
+import { readFile, readdir } from 'fs/promises'
 import postcss from 'postcss'
 import tailwindcss from 'tailwindcss'
-import { render } from './render.js'
+import createEngine, { render } from './render.js'
 
 async function buildcss(config) {
     return postcss([
         tailwindcss({
-            content: ['./**/*.liquid', './app.config.js']
+            content: ['./**/*.html', './app.config.js']
         })
     ]).process(`@tailwind base;
 @tailwind components;
@@ -32,13 +32,13 @@ function normalizeConfig(config) {
         config.config.layouts = './layouts'
     }
 
-    if(!config.middlewares) {
+    if (!config.middlewares) {
         config.middlewares = []
     }
 
     if (!config.ctx) {
         config.ctx = {}
-    }   
+    }
 }
 
 function ctxMiddleware(ctx) {
@@ -50,147 +50,50 @@ function ctxMiddleware(ctx) {
     }
 }
 
-async function parse(filename) {
-    const file = await readFile(filename, 'utf-8')
-    const serverRegex = /<script server>([\s\S]*?)<\/script>/;
-
-    const serverScriptMatch = file.match(serverRegex);
-    const template = file.replace(serverRegex, '');
-
-    const serverScript = serverScriptMatch ? serverScriptMatch[1].trim() : null;
-
-    const load = eval('(' + serverScript + ')')
-
-    return {
-        template,
-        load
-    }
-}
-
 async function renderPage(page, loadParams, config) {
-    async function renderComponent(component) {
-        const {name, props, content} = component
+    const engine = await createEngine({ components: config.config.components })
 
-        const {load, template} = await parse(path.resolve(path.join(config.config.components, name + '.html')))
+    // async function renderComponent(component) {
+    //     const {name, props, content} = component
 
-        // Handle load
-        function api(path) {
-            const baseUrl = loadParams.baseUrl;
-    
-            return {
-                async post(data, headers = {}) {
-                    return fetch(baseUrl + path, {
-                        method: 'POST', headers: {
-                            'Content-Type': 'application/json',
-                            ...headers
-                        }, body: JSON.stringify(data)
-                    }).then(res => res.json())
-                }
-            }
-        }
 
-        if (!component.props) component.props = {}
+    //     if (!component.props) component.props = {}
 
-        if (load) {
-            loadParams.props = component.props
-            loadParams.api = api
 
-            const props = await load(loadParams)
-            component.props = { ...component.props, ...props }
-        }
-        
-        let result = template
-        
-        if(content && typeof content === 'object' && Array.isArray(content)) {
-            let res = ''
-            for(let item of content) {
-                res += await renderComponent(item)
-            }
 
-            result = result.replace(`<slot name="content">`, res)
-            component.props['content'] = result
-        }
+    //     let result = template
 
-        return render(result, component.props);
-    }
+
+
+    //     let rendered = render(name, component.props, {...loadParams, api});
+
+    //     for(let component of componentList) {
+    //         if(rendered.indexOf('<' + component)) {
+    //             const path = path.resolve(path.join(config.config.components, component + '.html'))
+    //             const {template} = parse(path)
+
+
+    //             const componentTemplate = render(template, {})
+    //             rendered = rendered.slice(0, rendered.indexOf('<' + component)) + componentTemplate + rendered.slice(rendered.indexOf('</' + component))
+    //         }
+    //     }
+
+    //     return rendered
+    // }
 
     let head = Promise.resolve(() => '')
 
     if (config.config?.tailwindcss) {
         head = buildcss().then(css => `<style>${css}</style>`)
     }
-        
+
     let res = ''
-    for(let content of page.content) {
-        res += await renderComponent(content)
+    for (let content of page.content) {
+        res += await engine.render(content, loadParams)
     }
-    
-    return {html: res, head: await head}
+
+    return { html: res, head: await head }
 }
-// async function renderPage(page, loadParams, config) {
-//     // layout, slug, content | children
-    
-//     let head = Promise.resolve(() => '');
-
-
-//     const engine = {
-//         render() {
-
-//         }
-//     }
-//     // const engine = new Liquid({
-//     //     extname: '.liquid',
-//     //     partials: path.resolve(config.config.components),
-//     // });
-
-//     
-//   
-
-//     async function renderPageContent(content) {
-//         let result = content.map(async x => {
-//             console.log({ x })
-
-//             let filename = path.resolve(path.join(config.config.components, x.name + '.liquid'))
-
-//             const { template, load } = await parseLiquid(filename)
-
-//          
-//             return engine.parseAndRender(template, x.props)
-//         })
-
-//         return (await Promise.all(result)).join('')
-//     }
-
-//     async function renderPageLayout(layout, content) {
-//         console.log('loading layout: ', layout)
-//         const { template, load } = await parseLiquid(path.resolve(path.join(config.config.layouts, layout.name + '.liquid')))
-//         if (!layout.props) layout.props = {}
-
-//         if (load) {
-//             loadParams.props = layout.props
-//             loadParams.api = api
-
-//             const props = await load(loadParams)
-//             layout.props = { ...layout.props, ...props }
-//         }
-
-//         layout.props.content = content
-//         const res = await engine.parseAndRender(template, layout.props)
-
-//         return res
-//     }
-    
-//     let html = ''
-//     if (page.layouts) {
-//         html = await renderPageContent(page.content);
-//         for(let i=page.layouts.length; i>0; i--) {
-//             html = await renderPageLayout(page.layouts[i-1], html)
-//             console.log(page.layouts[i-1])
-//         }
-//     }
-
-//     return { html, head: await head }
-// }
 
 const template = `<!DOCTYPE html>
 <html lang="en">
@@ -234,7 +137,7 @@ window.onMount = (cb) => {
 function pagesMiddleware(pages, config) {
     const router = express.Router()
 
-    for(let page of pages) {
+    for (let page of pages) {
         console.log('register page', page.slug)
         registerPage(page, config, router)
     }
@@ -253,11 +156,27 @@ function registerPage(page, config, router) {
         const url = req.url
         const cookies = req.cookies
 
-        const { head, html } = await renderPage(page, { url, params, query, cookies, baseUrl }, config)
+        function api(path) {
+            const baseUrl = loadParams.baseUrl;
+
+            return {
+                async post(data, headers = {}) {
+                    return fetch(baseUrl + path, {
+                        method: 'POST', headers: {
+                            'Content-Type': 'application/json',
+                            ...headers
+                        }, body: JSON.stringify(data)
+                    }).then(res => res.json())
+                }
+            }
+        }
+
+
+        const { head, html } = await renderPage(page, { url, params, query, cookies, baseUrl, api }, config)
 
         const response = template
             .replace('<!--body-->', html)
-            .replace('<!--head-->', head  + `<script>${script}</script>`)
+            .replace('<!--head-->', head + `<script>${script}</script>`)
 
         res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
         return res.end(response)
@@ -298,7 +217,7 @@ export function createApp(config) {
 
     app.use(routesMiddleware(config.routes))
 
-    for(let middleware of config.middlewares) {
+    for (let middleware of config.middlewares) {
         app.use(middleware)
     }
 

@@ -13,9 +13,9 @@ export default {
 					name: 'Main',
 					content: [
 						{
-							name: 'First',
+							name: 'Loop',
 							props: {
-								name: 'Hadi'
+								items: ['Hadi', 'abdullah']
 							}
 						},
 						{
