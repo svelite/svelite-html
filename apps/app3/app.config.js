@@ -7,12 +7,27 @@ export default {
 	],
 	pages: [ 
 		 {
-			 slug: '/test',
-			layout: {
-				name: 'Main'
-			},
+			slug: '/test',
 			content: [
-				{name: "First"}]
+				{
+					name: 'Main',
+					content: [
+						{
+							name: 'First',
+							props: {
+								name: 'Hadi'
+							}
+						},
+						{
+							name: 'Condition',
+							props: {
+								true: true,
+								false: false
+							}
+						}
+					]
+				}
+			]
 		}
 	]
 }
