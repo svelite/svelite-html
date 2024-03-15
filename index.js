@@ -2,9 +2,9 @@ import express from 'express'
 import cookieParser from 'cookie-parser'
 import path from 'path'
 import { readFile } from 'fs/promises'
-import { Liquid } from 'liquidjs';
 import postcss from 'postcss'
 import tailwindcss from 'tailwindcss'
+import { render } from './render.js'
 
 async function buildcss(config) {
     return postcss([
@@ -50,7 +50,7 @@ function ctxMiddleware(ctx) {
     }
 }
 
-async function parseLiquid(filename) {
+async function parse(filename) {
     const file = await readFile(filename, 'utf-8')
     const serverRegex = /<script server>([\s\S]*?)<\/script>/;
 
@@ -68,88 +68,129 @@ async function parseLiquid(filename) {
 }
 
 async function renderPage(page, loadParams, config) {
-    // layout, slug, content | children
+    async function renderComponent(component) {
+        const {name, props, content} = component
+
+        const {load, template} = await parse(path.resolve(path.join(config.config.components, name + '.html')))
+
+        // Handle load
+        function api(path) {
+            const baseUrl = loadParams.baseUrl;
     
-    let head = Promise.resolve(() => '');
+            return {
+                async post(data, headers = {}) {
+                    return fetch(baseUrl + path, {
+                        method: 'POST', headers: {
+                            'Content-Type': 'application/json',
+                            ...headers
+                        }, body: JSON.stringify(data)
+                    }).then(res => res.json())
+                }
+            }
+        }
 
+        if (!component.props) component.props = {}
 
-    const engine = new Liquid({
-        extname: '.liquid',
-        partials: path.resolve(config.config.components),
-    });
+        if (load) {
+            loadParams.props = component.props
+            loadParams.api = api
+
+            const props = await load(loadParams)
+            component.props = { ...component.props, ...props }
+        }
+        
+        let result = template
+        
+        if(content && typeof content === 'object' && Array.isArray(content)) {
+            let res = ''
+            for(let item of content) {
+                res += await renderComponent(item)
+            }
+
+            result = result.replace(`<slot name="content">`, res)
+            component.props['content'] = result
+        }
+
+        return render(result, component.props);
+    }
+
+    let head = Promise.resolve(() => '')
 
     if (config.config?.tailwindcss) {
         head = buildcss().then(css => `<style>${css}</style>`)
     }
-
-    function api(path) {
-        const baseUrl = loadParams.baseUrl;
-
-        return {
-            async post(data, headers = {}) {
-                return fetch(baseUrl + path, {
-                    method: 'POST', headers: {
-                        'Content-Type': 'application/json',
-                        ...headers
-                    }, body: JSON.stringify(data)
-                }).then(res => res.json())
-            }
-        }
-    }
-
-    async function renderPageContent(content) {
-        let result = content.map(async x => {
-            console.log({ x })
-
-            let filename = path.resolve(path.join(config.config.components, x.name + '.liquid'))
-
-            const { template, load } = await parseLiquid(filename)
-
-            if (!x.props) x.props = {}
-            if (load) {
-                loadParams.props = x.props
-                loadParams.api = api
-
-                const props = await load(loadParams)
-                x.props = { ...x.props, ...props }
-            }
-
-            return engine.parseAndRender(template, x.props)
-        })
-
-        return (await Promise.all(result)).join('')
-    }
-
-    async function renderPageLayout(layout, content) {
-        console.log('loading layout: ', layout)
-        const { template, load } = await parseLiquid(path.resolve(path.join(config.config.layouts, layout.name + '.liquid')))
-        if (!layout.props) layout.props = {}
-
-        if (load) {
-            loadParams.props = layout.props
-            loadParams.api = api
-
-            const props = await load(loadParams)
-            layout.props = { ...layout.props, ...props }
-        }
-
-        layout.props.content = content
-        const res = await engine.parseAndRender(template, layout.props)
-
-        return res
+        
+    let res = ''
+    for(let content of page.content) {
+        res += await renderComponent(content)
     }
     
-    let html = ''
-    if (page.layouts) {
-        html = await renderPageContent(page.content);
-        for(let i=page.layouts.length; i>0; i--) {
-            html = await renderPageLayout(page.layouts[i-1], html)
-            console.log(page.layouts[i-1])
-        }
-    }
-
-    return { html, head: await head }
+    return {html: res, head: await head}
 }
+// async function renderPage(page, loadParams, config) {
+//     // layout, slug, content | children
+    
+//     let head = Promise.resolve(() => '');
+
+
+//     const engine = {
+//         render() {
+
+//         }
+//     }
+//     // const engine = new Liquid({
+//     //     extname: '.liquid',
+//     //     partials: path.resolve(config.config.components),
+//     // });
+
+//     
+//   
+
+//     async function renderPageContent(content) {
+//         let result = content.map(async x => {
+//             console.log({ x })
+
+//             let filename = path.resolve(path.join(config.config.components, x.name + '.liquid'))
+
+//             const { template, load } = await parseLiquid(filename)
+
+//          
+//             return engine.parseAndRender(template, x.props)
+//         })
+
+//         return (await Promise.all(result)).join('')
+//     }
+
+//     async function renderPageLayout(layout, content) {
+//         console.log('loading layout: ', layout)
+//         const { template, load } = await parseLiquid(path.resolve(path.join(config.config.layouts, layout.name + '.liquid')))
+//         if (!layout.props) layout.props = {}
+
+//         if (load) {
+//             loadParams.props = layout.props
+//             loadParams.api = api
+
+//             const props = await load(loadParams)
+//             layout.props = { ...layout.props, ...props }
+//         }
+
+//         layout.props.content = content
+//         const res = await engine.parseAndRender(template, layout.props)
+
+//         return res
+//     }
+    
+//     let html = ''
+//     if (page.layouts) {
+//         html = await renderPageContent(page.content);
+//         for(let i=page.layouts.length; i>0; i--) {
+//             html = await renderPageLayout(page.layouts[i-1], html)
+//             console.log(page.layouts[i-1])
+//         }
+//     }
+
+//     return { html, head: await head }
+// }
 
 const template = `<!DOCTYPE html>
 <html lang="en">
