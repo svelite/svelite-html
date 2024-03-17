@@ -4,7 +4,7 @@ import path from 'path'
 import { readFile, readdir } from 'fs/promises'
 import postcss from 'postcss'
 import tailwindcss from 'tailwindcss'
-import createEngine, { render } from './render.js'
+import createEngine from './render.js'
 
 async function buildcss(config) {
     return postcss([
@@ -51,35 +51,17 @@ function ctxMiddleware(ctx) {
 }
 
 async function renderPage(page, loadParams, config) {
-    const engine = await createEngine({ components: config.config.components })
 
-    // async function renderComponent(component) {
-    //     const {name, props, content} = component
+    const templates = {}
+    const components = await readdir(config.config.components)
 
+    for (let component of components) {
+        const content = await readFile(path.join(config.config.components, component), 'utf-8')
+        const name = component.replace('.html', '')
+        templates[name] = content
+    }
+    const engine = createEngine({ templates })
 
-    //     if (!component.props) component.props = {}
-
-
-
-    //     let result = template
-
-
-
-    //     let rendered = render(name, component.props, {...loadParams, api});
-
-    //     for(let component of componentList) {
-    //         if(rendered.indexOf('<' + component)) {
-    //             const path = path.resolve(path.join(config.config.components, component + '.html'))
-    //             const {template} = parse(path)
-
-
-    //             const componentTemplate = render(template, {})
-    //             rendered = rendered.slice(0, rendered.indexOf('<' + component)) + componentTemplate + rendered.slice(rendered.indexOf('</' + component))
-    //         }
-    //     }
-
-    //     return rendered
-    // }
 
     let head = Promise.resolve(() => '')
 
@@ -157,8 +139,6 @@ function registerPage(page, config, router) {
         const cookies = req.cookies
 
         function api(path) {
-            const baseUrl = loadParams.baseUrl;
-
             return {
                 async post(data, headers = {}) {
                     return fetch(baseUrl + path, {
@@ -225,7 +205,11 @@ export function createApp(config) {
         res.end('404 Not found')
     })
 
+    const listen = (port) => {
+        const { PORT = port } = process.env
+        return app.listen(port, () => console.log('Listening on http://localhost:' + port))
+    }
+
+    app.start = listen;
     return app
-    // const { PORT = port } = process.env
-    // app.listen(PORT, () => console.log('listening on http://localhost:' + PORT))
 }
