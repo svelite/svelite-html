@@ -50,6 +50,22 @@ function ctxMiddleware(ctx) {
     }
 }
 
+function parse(template) {
+    console.log(template)
+    const serverRegex = /<script server>([\s\S]*?)<\/script>/;
+
+    const serverScriptMatch = template.match(serverRegex);
+
+    const serverScript = serverScriptMatch ? serverScriptMatch[1].trim() : null;
+
+    const load = eval('(' + serverScript + ')')
+
+    return {
+        template: template.replace(serverRegex, ''),
+        load
+    }
+}
+
 async function renderPage(page, loadParams, config) {
 
     const templates = {}
@@ -58,8 +74,9 @@ async function renderPage(page, loadParams, config) {
     for (let component of components) {
         const content = await readFile(path.join(config.config.components, component), 'utf-8')
         const name = component.replace('.html', '')
-        templates[name] = content
+        templates[name] = parse(content)
     }
+
     const engine = createEngine({ templates })
 
 

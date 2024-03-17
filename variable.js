@@ -2,16 +2,19 @@ export function renderVariable(template, props, stringify) {
     let value = template.slice(1, template.length - 1).trim()
 
     for (let key in props) {
-        value = value.replace(new RegExp(`${key}`, 'g'), 'props.' + key)
+        value = value.replace(new RegExp(`(?<!\\.)\\b${key}\\b`, 'g'), 'props.' + key)
     }
 
     try {
+        console.log('eval: ', value)
         let res1 = eval(value)
 
         let res = res1;
         if (stringify) {
             res = JSON.stringify(res1)
         }
+
+        console.log(res)
 
         // template = template + res + template.slice(i + 1)
         return res
@@ -25,6 +28,7 @@ export function renderVariable(template, props, stringify) {
 }
 
 export function renderVariables(template, props, stringify) {
+    if(!template) return ''
 
     let pre = ''
     let post = ''
@@ -61,11 +65,13 @@ export function renderVariables(template, props, stringify) {
 
             stack.pop()
             if(stack.length == 0) {
+                console.log('render: ', template)
                 const variable = template.slice(index, i + 1)
                 
                 pre = template.slice(0, index)
                 post = template.slice(i + 1)
-                return pre + renderVariable(variable, props, stringify) + post
+                console.log('calling renderVariable: ')
+                return pre + renderVariable(variable, props, stringify) + renderVariables(post, props, stringify)
             }
         }   
     }
