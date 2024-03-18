@@ -47,9 +47,11 @@ export function createMemoryDb(initialData = {}) {
 
                 _data[table] = _data[table].map(x => {
 
-                    if (x.id === data.id)
+                    if (x.id === data.id) {
+
                         data.updatedAt = new Date().valueOf()
                         return { ...x, ...data }
+                    }
 
                     return x
                 })

@@ -42,6 +42,21 @@ export function renderVariables(template, props, stringify) {
         if(stack.at(-1) === '-->' && template.slice(i).startsWith('-->')) {
             stack.pop()
         }
+
+        if(template.slice(i).startsWith('<script')) {
+            stack.push('</script>')
+        }
+        if(stack.at(-1) === '</script>' && template.slice(i).startsWith('</script>')) {
+            stack.pop()
+        }
+        
+        if(template.slice(i).startsWith('<style')) {
+            stack.push('</style>')
+        }
+        if(stack.at(-1) === '</style>' && template.slice(i).startsWith('</style>')) {
+            stack.pop()
+        }
+        
         if(template.slice(i).startsWith('@for')) {
             stack.push('@endfor')
         }
