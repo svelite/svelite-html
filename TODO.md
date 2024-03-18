@@ -1,4 +1,11 @@
-## Skip script and style tags for render
+## Cleanup db file
+## Update folder structure
+## npx svelite should support directory parameter
+npx svelite ./apps/app3
 
-## fix component prop passing <ExpenseItem name={item} ...>
+also should update components path...
 
+
+## support custom css with tailwindcss.
+
+## standard usage of script in frontend code (alpine...)
