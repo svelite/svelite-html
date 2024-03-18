@@ -1,5 +1,5 @@
 import { getProps } from "./props.js";
-import { renderVariable, renderVariables } from "./variable.js";
+import { evaluate, renderVariable, renderVariables } from "./variable.js";
 
 
 function findMatchingPair(template, index, char) {
@@ -73,6 +73,7 @@ function getCondition(template, index) {
 }
 
 function getBlock(template, index, endtags, skipOn) {
+    console.log('getBlock', template.slice(index), {endtags, skipOn})
 
     let stack = 0;
     for (let i = index; i < template.length; i++) {
@@ -84,6 +85,7 @@ function getBlock(template, index, endtags, skipOn) {
 
             for (let tag of endtags) {
                 if (template.slice(i).startsWith(tag)) {
+                    console.log('found tag', template.slice(i), tag)
 
                     // const tagIndex = template.indexOf(tag, index)
                     const start = index + 1
@@ -160,18 +162,11 @@ function getForTag(template, index) {
     const iteratorStart = findMatchingPair(template, start, '(') + 1
     const iteratorEnd = findMatchingPair(template, start, ')')
 
-    console.log(iteratorEnd)
-
     const iterator = template.slice(iteratorStart, iteratorEnd);
     const [key, list] = iterator.split(' in ');
 
-    console.log([{key, list}])
-
-    console.log('getBlock', template.slice(iteratorStart))
     const block = getBlock(template, iteratorEnd, ['@endfor'], ['@for', '@endfor'])
 
-    console.log('block: ', block)
-    
     if (block) {
         end = block.end + '@endfor'.length
     }
@@ -181,11 +176,7 @@ function getForTag(template, index) {
         item: key,
         block: block?.result ?? ''
     }
-    console.log('FOR:', template.slice(start, end))
-    console.log()
-    console.log()
-    console.log()
-    console.log()
+
     return {
         start,
         end,
@@ -197,59 +188,67 @@ function getComponentName(template, index) {
 
     for (let i = index; i < template.length; i++) {
 
-        if (template[i] === ' ' || template[i] == '>' || (template[i] == '/' && template[i + 1] == '>')) {
+        if (template[i] === ',') {
             const endName = i
-            return template.slice(index + 1, endName)
+            return {
+                start: index + 1,
+                end: endName,
+                result: template.slice(index + 1, endName).replace(/'/g, '').replace(/"/g, '')
+            }
         }
     }
 }
 
+function getObject(template, index) {
+    let stack = 0
+    let start = index
+
+    for(let i=index; i<template.length; i++) {
+        const char = template[i]
+
+        if(char === '{') {
+            stack +=1
+            if(stack === 1) {
+                start = i
+            }
+        }
+        if(char === '}' && stack > 0) {
+            stack -=1
+
+            if(stack === 0) {
+                return {
+                    start,
+                    end: i + 1,
+                    result: template.slice(start, i + 1)
+                }
+            }
+        }
+    }
+    return null
+}
+
 function getComponentTag(template, index) {
     // TODO: Implement
-    let name = getComponentName(template, index)
-    let content = ''
-    let endIndex = index
+    let name = getComponentName(template, index + '@include'.length)
+    let props = getObject(template, name.end)
 
-    let props = {}
-    let inline = false;
+    console.log('getBlock', template.slice(props.end + 1))
+    let content = getBlock(template, props.end + 1, ['@endinclude'], ['@include', '@endinclude'])
 
-    const startProps = index + 1 + name.length;
-    let propsStr;
-    for (let i = index; i < template.length; i++) {
-        if (template.slice(i).startsWith('/>')) {
-            const endProps = i
-            propsStr = template.slice(startProps, endProps)
-            content = ''
-            inline = true;
-            endIndex = i + 2
-            break;
-        }
-        if (template.slice(i).startsWith('>')) {
-            const endProps = i
-            propsStr = template.slice(startProps, endProps)
-            const block = getBlock(template, inline ? index + propsStr.length + (name.length + 2) : index + propsStr.length + (name.length + 1), ['</' + name], ['<' + name, '</' + name])
+    console.log({content})
 
-            inline = false;
-            endIndex = block.end
-
-            content = block.result
-            break;
-        }
-    }
 
     const result = {
-        type: 'component',
-        name,
-        inline,
-        props: getProps(propsStr),
-        content,
+        type: 'include',
+        name: name.result,
+        props: props?.result ?? '',
+        content: content?.result ?? '',
     }
 
-    console.log('result: ', result)
-    
+
     return {
         start: index,
-        end: endIndex + (inline ? 2 : name.length + 3),
+        end: (content?.end ?? props.end) + '@endinclude'.length,
         result
     }
 }
@@ -261,26 +260,31 @@ function findNextTag(template) {
         if (template.slice(i).startsWith('@for')) {
             return getForTag(template, i)
         }
-        if (template[i] === '<' && template[i + 1] >= 'A' && template[i + 1] <= 'Z') {
+        if (template.slice(i).startsWith('@include')) {
             return getComponentTag(template, i)
         }
     }
 }
 
 function applyTag(template, props, tag, templates) {
+    console.log('applyTag', tag)
 
     function getContent() {
         if (tag.result.type == 'if') {
-            console.log('calling renderVariable if')
-            const result = eval(renderVariable(`{${tag.result.condition}}`, props))
+            let result; 
+
+            try {
+                result = evaluate(renderVariable(`{${tag.result.condition}}`, props), props)
+            } catch(err) {
+                result = false;
+            }
 
             if (result) {
                 return tag.result.block
             }
             for (let elseif of tag.result.elseifs) {
 
-            console.log('calling renderVariable elseif')
-                const result = eval(renderVariable(`{${elseif.condition}}`, props))
+                const result = evaluate(renderVariable(`{${elseif.condition}}`, props), props)
 
                 if (result) {
                     return elseif.block
@@ -289,56 +293,57 @@ function applyTag(template, props, tag, templates) {
             return tag.result.else
         } else if (tag.result.type == 'for') {
 
-            console.log('calling renderVariable for', tag.result, props)
             const rendered = renderVariable(`{${tag.result.iterator}}`, props, true)
-            const iterator = eval(rendered)
+            const iterator = evaluate(rendered, props)
 
-            console.log('iterator: ', iterator)
             let res = ''
             for (let item of iterator) {
-                console.log('inside loop')
                 res += render(tag.result.block, { ...props, [tag.result.item]: item }, templates)
             }
-            console.log('returning: ', res)
             return res;
-        } else if (tag.result.type === 'component') {
+        } else if (tag.result.type === 'include') {
             const template = templates[tag.result.name].template
 
-            for (let key in tag.result.props) {
-                if (tag.result.props[key].startsWith('{')) {
+            console.log(props)
+            console.log('start evaluate', `(${tag.result.props})`, props)
+            const props2 = evaluate(`(${tag.result.props})`, props)
+            console.log('end evaluate')
+            console.log(props2)
 
-                    console.log('calling renderVariable component prop')
-                    tag.result.props[key] = renderVariable(`${tag.result.props[key]}`, props, true)
-                    if(typeof tag.result.props[key] === 'string') {
-                        tag.result.props[key] = JSON.parse(tag.result.props[key])
-                    }
-                }
-            }
-            console.log("tag.result.props", tag.result.props)
+            // for (let key in tag.result.props) {
+            //     if (tag.result.props[key].startsWith('{')) {
 
-            return render(template, { content: render(tag.result.content, props, templates), ...tag.result.props }, templates)
+            //         console.log('calling renderVariable include prop')
+            //         tag.result.props[key] = renderVariable(`${tag.result.props[key]}`, props, true)
+            //         if (typeof tag.result.props[key] === 'string') {
+            //             tag.result.props[key] = JSON.parse(tag.result.props[key])
+            //         }
+            //     }
+            // }
+            // console.log("tag.result.props", tag.result.props)
 
+            // return render(template, { content: render(tag.result.content, props, templates), ...tag.result.props }, templates)
+
+            props2.content = render(tag.result.content, props, templates)
+            const res = render(template, props2, templates)
+            console.log({res})
+            return res
         }
     }
 
-    console.log("rendering!!!!", tag.start, tag.end, template.slice(tag.start, tag.end))
     return template.slice(0, tag.start) + getContent() + template.slice(tag.end)
 
 }
 
 function render(template, props, templates) {
-    console.log({props})
     let result = renderVariables(template, props);
-    console.log({template, result})
-    
+
 
     const tag = findNextTag(result)
 
     if (tag) {
-        console.log('before applying tag: ', result, tag)
         result = applyTag(result, props, tag, templates)
 
-        console.log('calling render from recursive: ', result)
         return render(result, props, templates)
     }
 
@@ -347,17 +352,15 @@ function render(template, props, templates) {
 
 export default function createEngine({ templates }) {
 
-    console.log(templates)
     return {
-        async render(component, loadParams) {
-            console.log('createEngine render', component)
-            const name = component.name
-            let props = component.props ?? {}
-            props.content = props.content ?? component.content ?? []
+        async render(include, loadParams) {
+            const name = include.name
+            let props = include.props ?? {}
+            props.content = props.content ?? include.content ?? []
 
-            if(templates[name].load) {
+            if (templates[name].load) {
                 const loadProps = await templates[name].load(loadParams)
-                props = {...props, ...loadProps}
+                props = { ...props, ...loadProps }
             }
 
             if (props.content) {
@@ -368,31 +371,56 @@ export default function createEngine({ templates }) {
                 props.content = res
             }
 
-            console.log(templates[name])
-            console.log(render(templates[name].template, props, templates))
             return render(templates[name].template, props, templates)
         }
     }
 }
 
 const engine = createEngine({
+    // templates: {
+    //     Home: {
+    //         template: '@include("Test", {name}) abc @endinclude'
+    //     },
+    //     Test: {
+    //         template: '<name>{name}</name><content>{content}</content>'
+    //     }
+    // }
     templates: {
         // "Home": {
         //     template: `<div>@for (i in names) {i} @endfor</div>`
         // }
+        'Select': {
+            template: `<select name="{name}" id="{id}" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">
+            @if(placeholder)<option selected value="{ item.name }" disabled> {placeholder}</option>@endif
+            {content}
+            </select>`
+        },
+        'Option': {
+            template: `<option @if(selected)selected@endif>{ value }</option>`
+        },
         'Home': {
-            template: `<div class="something">
-            <select name="name" id="nameInput" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">
-                <option selected value="{ item.name }" disabled> انتخاب نام </option>
-
+            template: `
+            @include('Select', {
+                name: 'name',
+                id: 'nameInput',
+                placeholder: 'انتخاب نام',
+            })
                 @for (name in names)
-                    <option { item.name == name ? 'selected' : '' } >{ name }</option>
+                    @include("Option", {value: name, selected: name === 'hadi'})
+                    @endinclude
                 @endfor
-                <option value="__new__">نام جدید...</option>
-            </select>
-            <div>`
+            @endinclude
+            `
         }
     }
 })
-const rendered = await engine.render({name: 'Home', props: {names: ['hadi', 'mahsa'], item: {name: 'hadi', value: 3}}})
+const rendered = await engine.render({ name: 'Home', props: { name: 'hadi', names: ['hadi', 'mahsa'], item: { name: 'hadi', value: 3 } } })
 console.log(rendered)
+
+// <div class="something">
+{/* <select name="name" id="nameInput" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">
+                <option selected value="{ item.name }" disabled> انتخاب نام </option>
+
+                <option value="__new__">نام جدید...</option>
+            </select>
+            <div></div> */}
