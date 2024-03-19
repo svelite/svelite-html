@@ -315,7 +315,7 @@ function applyTag(template, props, tag, templates, head) {
             for (let item of iterator) {
                 const result = render(tag.result.block, { ...props, [tag.result.item]: item }, templates, head)
                 res += result.html
-                head += result.head
+                // head += result.head
             }
             return res;
         } else if (tag.result.type === 'include') {
@@ -332,11 +332,11 @@ function applyTag(template, props, tag, templates, head) {
             
             console.log('res')
             if(res.startsWith('<')) {
-                return `<!--include:${tag.result.name}-->` + res
+                return `\n<!--include:${tag.result.name}-->` + res
             }
             return res
         } else if(tag.result.type === 'head') {
-            head = render(tag.result.content, props, templates, head).html
+            head[template] = render(tag.result.content, props, templates, '').html
 
             console.log('set head to ', head)
             return ''
@@ -350,8 +350,7 @@ function applyTag(template, props, tag, templates, head) {
 
 }
 
-function render(template, props, templates, head = '') {
-    console.log('render')
+function render(template, props, templates, head = {}) {
     let result = renderVariables(template, props);
 
     const tag = findNextTag(result)
@@ -359,7 +358,6 @@ function render(template, props, templates, head = '') {
 
     if (tag) {
         result = applyTag(result, props, tag, templates, head)
-        head += result.head
 
         return render(result.html, props, templates, head)
     }
@@ -379,7 +377,8 @@ export default function createEngine({ templates }) {
             const name = component.name
             let props = component.props ?? {}
             props.content = props.content ?? component.content ?? []
-            let head = component.head ?? ''
+            let head = {}
+            head[component.template] = component.head ?? ''
 
             if (templates[name].load) {
                 const loadProps = await templates[name].load(loadParams)
@@ -391,7 +390,6 @@ export default function createEngine({ templates }) {
                 for (let content of props.content) {
                     const response = await this.render(content, loadParams)
                     res += response.html
-                    head += response.head ?? ''
                 }
                 props.content = res
             }
@@ -401,9 +399,9 @@ export default function createEngine({ templates }) {
 
             console.log('res')
             if(result.html.startsWith('<')) {
-                result.html = `<!--include:${name}-->` + result.html
+                result.html = `\n<!--include:${name}-->` + result.html
             }
-            return {html: result.html, head: result.head }
+            return {html: result.html, head: Object.keys(result.head).map(x => result.head[x]).join('') }
         }
     }
 }

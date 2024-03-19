@@ -11,6 +11,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "svelite-html": "^1.0.1-next.18"
+    "svelite-html": "^1.0.1-next.29"
   }
 }

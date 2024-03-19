@@ -1,9 +1,12 @@
+@head
+    <title>Table page</title>
+@endhead
 <div class="container mx-auto p-4">
     <table class="min-w-full divide-y divide-gray-600">
         @include('TableHead', {})
             @for(field in fields)
                 @include('TableCell', {head: true})
-                    {field.name}
+                    {{field.name}}
                 @endinclude
             @endfor
         @endinclude
@@ -12,7 +15,7 @@
             @include('TableRow', {})
                 @for(field in fields)
                     @include('TableCell', {})
-                        {row[field.key]}
+                        {{row[field.key]}}
                     @endinclude
                 @endfor
             @endinclude
