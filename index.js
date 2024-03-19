@@ -117,6 +117,7 @@ async function renderPage(page, loadParams, config) {
                 if (child.nodeType === Node.COMMENT_NODE) {
                     const value = child.nodeValue.trim()
                     if(value.startsWith('include:')) {
+                        child.parentNode.remove(child);
                         const name = value.split(':')[1]
                         components[name](child.nextElementSibling)
                     }
