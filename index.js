@@ -83,7 +83,7 @@ async function renderPage(page, loadParams, config) {
         const content = await readFile(path.join(config.config.components, component), 'utf-8')
         const name = component.replace('.html', '')
         templates[name] = parse(content)
-        script += `components["${name}"] = ($el) => {${templates[name].script ?? ''}; ${name}($el)};\n`
+        script += `components["${name}"] = ($el) => {${templates[name].script ?? `function ${name}($el) {}`}; ${name}($el)};\n`
 
     }
 
