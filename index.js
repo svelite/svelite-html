@@ -118,8 +118,8 @@ async function renderPage(page, loadParams, config) {
                     const name = value.split(':')[1]
                     components[name](child.nextElementSibling)
                 }
-            } else if(element.nodeType === Node.ELEMENT_NODE) {
-                initialize(element)
+            } else if(child.nodeType === Node.ELEMENT_NODE) {
+                initialize(child)
             }
         })
     }
