@@ -109,24 +109,19 @@ async function renderPage(page, loadParams, config) {
 			}
 		}
 	}
-    function initialize(el) {
-        const allElements = el.querySelectorAll('*');
-
-        allElements.forEach(element => {
-            element.childNodes.forEach(child => {
-                if (child.nodeType === Node.COMMENT_NODE) {
-                    const value = child.nodeValue.trim()
-                    if(value.startsWith('include:')) {
-                        child.parentNode.remove(child);
-                        const name = value.split(':')[1]
-                        components[name](child.nextElementSibling)
-                    }
+    function initialize(element) {
+        element.childNodes.forEach(child => {
+            if (child.nodeType === Node.COMMENT_NODE) {
+                const value = child.nodeValue.trim()
+                if(value.startsWith('include:')) {
+                    child.parentNode.remove(child);
+                    const name = value.split(':')[1]
+                    components[name](child.nextElementSibling)
                 }
-            })
-            if (element.nodeType === Node.ELEMENT_NODE) {
+            } else if(element.nodeType === Node.ELEMENT_NODE) {
                 initialize(element)
             }
-        });
+        })
     }
 
     document.addEventListener('DOMContentLoaded', () => {
