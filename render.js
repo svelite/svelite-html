@@ -91,7 +91,13 @@ function getBlock(template, index, endtags, skipOn) {
                     const start = index + 1
                     const end = i
 
-                    const result = template.slice(start, end).trim()
+                    let result = template.slice(start, end).trim()
+
+                    console.log(result[0])
+
+                    if(result[0] != '<') {
+                        result = ' ' + result
+                    }
 
                     return {
                         start,
@@ -336,8 +342,11 @@ function applyTag(template, props, tag, templates) {
 }
 
 function render(template, props, templates) {
+    console.log('render', template, props)
+
     let result = renderVariables(template, props);
 
+    console.log(result)
 
     const tag = findNextTag(result)
 
@@ -372,50 +381,54 @@ export default function createEngine({ templates }) {
             }
 
             return render(templates[name].template, props, templates)
+            
         }
     }
 }
 
-// const engine = createEngine({
-//     // templates: {
-//     //     Home: {
-//     //         template: '@include("Test", {name}) abc @endinclude'
-//     //     },
-//     //     Test: {
-//     //         template: '<name>{name}</name><content>{content}</content>'
-//     //     }
-//     // }
-//     templates: {
-//         // "Home": {
-//         //     template: `<div>@for (i in names) {i} @endfor</div>`
-//         // }
-//         'Select': {
-//             template: `<select name="{name}" id="{id}" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">
-//             @if(placeholder)<option selected value="{ item.name }" disabled> {placeholder}</option>@endif
-//             {content}
-//             </select>`
-//         },
-//         'Option': {
-//             template: `<option @if(selected)selected@endif>{ value }</option>`
-//         },
-//         'Home': {
-//             template: `
-//             @include('Select', {
-//                 name: 'name',
-//                 id: 'nameInput',
-//                 placeholder: 'انتخاب نام',
-//             })
-//                 @for (name in names)
-//                     @include("Option", {value: name, selected: name === 'hadi'})
-//                     @endinclude
-//                 @endfor
-//             @endinclude
-//             `
-//         }
-//     }
-// })
-// const rendered = await engine.render({ name: 'Home', props: { name: 'hadi', names: ['hadi', 'mahsa'], item: { name: 'hadi', value: 3 } } })
-// console.log(rendered)
+const engine = createEngine({
+    // templates: {
+    //     Home: {
+    //         template: '@include("Test", {name}) abc @endinclude'
+    //     },
+    //     Test: {
+    //         template: '<name>{name}</name><content>{content}</content>'
+    //     }
+    // }
+    templates: {
+        // "Home": {
+        //     template: `<div>@for (i in names) {i} @endfor</div>`
+        // }
+        'Select': {
+            template: `<select name="{{name}}" id="{{id}}" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">
+            @if(placeholder)<option selected value="{{ item.name }}" disabled> {{placeholder}}</option>@endif
+            {{content}}
+            </select>`
+        },
+        'Option': {
+            template: `<option@if(selected) selected @endif>{{value}}</option>`
+        },
+        'Home': {
+            template: `
+            @include('Select', {
+                name: 'name',
+                id: 'nameInput',
+                placeholder: 'انتخاب نام',
+            })
+                @for (n in names)
+                    @include("Option", {value: n, selected: n === name})
+                    @endinclude
+                @endfor
+            @endinclude
+            `
+        }
+        // Home: {
+        //     template: '<div>Hello {{name}}{{name2}}{{name}}</div>'
+        // }
+    }
+})
+const rendered = await engine.render({ name: 'Home', props: { name: 'hi', names: ['hi', 'di'] }})
+console.log(rendered)
 
 // <div class="something">
 {/* <select name="name" id="nameInput" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">

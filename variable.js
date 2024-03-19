@@ -4,7 +4,7 @@ export function evaluate(code, context = {}) {
 }
 
 export function renderVariable(template, props, stringify) {
-    let value = template.slice(1, template.length - 1).trim()
+    let value = template.trim()
 
     try {
         let res1 = evaluate(value, props)
@@ -76,18 +76,20 @@ export function renderVariables(template, props, stringify) {
             stack.pop()
         }
         
-        if(template[i] === '{') {
+        if(template[i] === '{' && template[i+1] === '{') {
             index = i
-            stack.push('}')
+            stack.push('}}')
         }
-        if(stack.at(-1) === '}' && template[i] === '}') {
+        if(stack.at(-1) === '}}' && template[i] === '}' && template[i+1] === '}') {
 
             stack.pop()
             if(stack.length == 0) {
-                const variable = template.slice(index, i + 1)
+                const variable = template.slice(index + 2, i )
+
+                console.log("Variable: ", variable)
                 
                 pre = template.slice(0, index)
-                post = template.slice(i + 1)
+                post = template.slice(i + 2)
                 return pre + renderVariable(variable, props, stringify) + renderVariables(post, props, stringify)
             }
         }   

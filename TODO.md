@@ -9,3 +9,11 @@ also should update components path...
 ## support custom css with tailwindcss.
 
 ## standard usage of script in frontend code (alpine...)
+
+## support dynamic component
+
+
+@include("{componentName}", {componentProps})
+{componentContent}
+@endinclude
+
