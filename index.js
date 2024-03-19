@@ -31,6 +31,9 @@ function normalizeConfig(config) {
     if (!config.config.layouts) {
         config.config.layouts = './layouts'
     }
+    if (!config.config.static) {
+        config.config.static = './public'
+    }
 
     if (!config.middlewares) {
         config.middlewares = []
@@ -240,6 +243,10 @@ export function createApp(config) {
     normalizeConfig(config)
 
     const app = express()
+
+    if(config.config.static) {
+        app.use(express.static(config.config.static))
+    }
     app.use(cookieParser())
     app.use(express.json())
     app.use(express.urlencoded({ extended: true }))
