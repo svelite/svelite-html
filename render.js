@@ -190,11 +190,11 @@ function getComponentName(template, index) {
 
     for (let i = index; i < template.length; i++) {
 
-        if (template[i] === ',') {
+        if (template[i] === ',' || template[i] === ')') {
             const endName = i
             return {
                 start: index + 1,
-                end: endName,
+                end: endName -1,
                 result: template.slice(index + 1, endName).replace(/'/g, '').replace(/"/g, '')
             }
         }
@@ -220,7 +220,7 @@ function getObject(template, index) {
             if(stack === 0) {
                 return {
                     start,
-                    end: i + 1,
+                    end: i,
                     result: template.slice(start, i + 1)
                 }
             }
@@ -232,18 +232,17 @@ function getObject(template, index) {
 function getComponentTag(template, index) {
     // TODO: Implement
     let name = getComponentName(template, index + '@include'.length)
+
     let props = getObject(template, name.end)
 
-    let content = getBlock(template, props.end + 1, ['@endinclude'], ['@include', '@endinclude'])
-
+    let content = getBlock(template, (props?.end ?? name.end) + 1, ['@endinclude'], ['@include', '@endinclude'])
 
     const result = {
         type: 'include',
         name: name.result,
-        props: props?.result ?? '',
+        props: props?.result ?? '{}',
         content: content?.result ?? '',
     }
-
 
     return {
         start: index,
@@ -330,7 +329,6 @@ function applyTag(template, props, tag, templates, head) {
             const res = rendered2.html
             // head += rendered2.html
             
-            console.log('res')
             if(res.startsWith('<')) {
                 return `\n<!--include:${tag.result.name}-->` + res
             }
@@ -338,7 +336,6 @@ function applyTag(template, props, tag, templates, head) {
         } else if(tag.result.type === 'head') {
             head[template] = render(tag.result.content, props, templates, '').html
 
-            console.log('set head to ', head)
             return ''
         }
     }
@@ -354,7 +351,6 @@ function render(template, props, templates, head = {}) {
     let result = renderVariables(template, props);
 
     const tag = findNextTag(result)
-    console.log('tag: ', result)
 
     if (tag) {
         result = applyTag(result, props, tag, templates, head)
@@ -362,7 +358,6 @@ function render(template, props, templates, head = {}) {
         return render(result.html, props, templates, head)
     }
 
-    console.log('head', head)
     return {
         html: result.trim(),
         head
@@ -373,7 +368,6 @@ export default function createEngine({ templates }) {
 
     return {
         async render(component, loadParams) {
-            console.log('render', component)
             const name = component.name
             let props = component.props ?? {}
             props.content = props.content ?? component.content ?? []
@@ -396,8 +390,6 @@ export default function createEngine({ templates }) {
 
             let result = render(templates[name]?.template ?? `template ${name} not found.`, props, templates, head)
 
-
-            console.log('res')
             if(result.html.startsWith('<')) {
                 result.html = `\n<!--include:${name}-->` + result.html
             }
@@ -448,8 +440,12 @@ const engine = createEngine({
         //     script: 'console.log("initialized Home", $el)'
 
         // }
+        Test: {
+            template: 'Test'
+        },
         Home: {
-            template: '@head<title>Title</title>@endhead<div>Hello {{name}}{{name2}}{{name}}</div>'
+            // template: '@head<title>Title</title>@endhead<div>Hello {{name}}{{name2}}{{name}}</div>'
+            template: `@include('Test', {a: 1})content@endinclude`
         }
     }
 })
