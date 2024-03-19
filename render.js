@@ -251,6 +251,20 @@ function getComponentTag(template, index) {
         result
     }
 }
+
+function getHeadTag(template, index) {
+
+    const block = getBlock(template, index + 'head'.length, ['@endhead'], [])
+
+    return {
+        start: index,
+        end: block.end + '@endhead'.length,
+        result: {
+            type: 'head',
+            content: block.result
+        }
+    }
+}
 function findNextTag(template) {
     for (let i = 0; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
@@ -262,10 +276,13 @@ function findNextTag(template) {
         if (template.slice(i).startsWith('@include')) {
             return getComponentTag(template, i)
         }
+        if (template.slice(i).startsWith('@head')) {
+            return getHeadTag(template, i)
+        }
     }
 }
 
-function applyTag(template, props, tag, templates) {
+function applyTag(template, props, tag, templates, head) {
 
     function getContent() {
         if (tag.result.type == 'if') {
@@ -296,7 +313,9 @@ function applyTag(template, props, tag, templates) {
 
             let res = ''
             for (let item of iterator) {
-                res += render(tag.result.block, { ...props, [tag.result.item]: item }, templates)
+                const result = render(tag.result.block, { ...props, [tag.result.item]: item }, templates, head)
+                res += result.html
+                head += result.head
             }
             return res;
         } else if (tag.result.type === 'include') {
@@ -304,49 +323,69 @@ function applyTag(template, props, tag, templates) {
 
             const props2 = evaluate(`(${tag.result.props})`, props)
 
-            props2.content = render(tag.result.content, props, templates)
-            const res = render(template, props2, templates)
+            const rendered = render(tag.result.content, props, templates, head)
+            props2.content = rendered.html
+            // head += rendered.head
+            const rendered2 = render(template, props2, templates, head)
+            const res = rendered2.html
+            // head += rendered2.html
             
             console.log('res')
             if(res.startsWith('<')) {
                 return `<!--include:${tag.result.name}-->` + res
             }
-            return   res
+            return res
+        } else if(tag.result.type === 'head') {
+            head = render(tag.result.content, props, templates, head).html
+
+            console.log('set head to ', head)
+            return ''
         }
     }
 
-    return template.slice(0, tag.start) + getContent() + template.slice(tag.end)
+    return {
+        html: template.slice(0, tag.start) + getContent() + template.slice(tag.end),
+        head
+    }
 
 }
 
-function render(template, props, templates) {
+function render(template, props, templates, head = '') {
+    console.log('render')
     let result = renderVariables(template, props);
 
     const tag = findNextTag(result)
+    console.log('tag: ', result)
 
     if (tag) {
-        result = applyTag(result, props, tag, templates)
+        result = applyTag(result, props, tag, templates, head)
+        head += result.head
 
-        return render(result, props, templates)
+        return render(result.html, props, templates, head)
     }
 
-    return result.trim();
+    console.log('head', head)
+    return {
+        html: result.trim(),
+        head
+    }
 }
 
 export default function createEngine({ templates }) {
 
     return {
         async render(component, loadParams) {
+            console.log('render', component)
             const name = component.name
             let props = component.props ?? {}
             props.content = props.content ?? component.content ?? []
+            let head = component.head ?? ''
 
             if (templates[name].load) {
                 const loadProps = await templates[name].load(loadParams)
                 props = { ...props, ...loadProps }
             }
 
-            let head = component.head
             if (props.content) {
                 let res = ''
                 for (let content of props.content) {
@@ -357,64 +396,67 @@ export default function createEngine({ templates }) {
                 props.content = res
             }
 
-            let html = render(templates[name].template, props, templates)
+            let result = render(templates[name].template, props, templates, head)
 
 
             console.log('res')
-            if(html.startsWith('<')) {
-                html = `<!--include:${name}-->` + html
+            if(result.html.startsWith('<')) {
+                result.html = `<!--include:${name}-->` + result.html
             }
-            return {html, head }
+            return {html: result.html, head: result.head }
         }
     }
 }
 
-// const engine = createEngine({
-//     // templates: {
-//     //     Home: {
-//     //         template: '@include("Test", {name}) abc @endinclude'
-//     //     },
-//     //     Test: {
-//     //         template: '<name>{name}</name><content>{content}</content>'
-//     //     }
-//     // }
-//     templates: {
-//         // "Home": {
-//         //     template: `<div>@for (i in names) {i} @endfor</div>`
-//         // }
-//         'Select': {
-//             template: `<select name="{{name}}" id="{{id}}" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">
-//             @if(placeholder)<option selected value="{{ item.name }}" disabled> {{placeholder}}</option>@endif
-//             {{content}}
-//             </select>`,
-//             script: 'console.log("initialized select", $el)'
-//         },
-//         'Option': {
-//             template: `<option@if(selected) selected @endif>{{value}}</option>`
-//         },
-//         'Home': {
-//             template: `
-//             @include('Select', {
-//                 name: 'name',
-//                 id: 'nameInput',
-//                 placeholder: 'انتخاب نام',
-//             })
-//                 @for (n in names)
-//                     @include("Option", {value: n, selected: n === name})
-//                     @endinclude
-//                 @endfor
-//             @endinclude
-//             `,
-//             script: 'console.log("initialized Home", $el)'
+const engine = createEngine({
+    // templates: {
+    //     Home: {
+    //         template: '@include("Test", {name}) abc @endinclude'
+    //     },
+    //     Test: {
+    //         template: '<name>{name}</name><content>{content}</content>'
+    //     }
+    // }
+    templates: {
+        // "Home": {
+        //     template: `<div>@for (i in names) {i} @endfor</div>`
+        // }
+        'Select': {
+            template: `<select name="{{name}}" id="{{id}}" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">
+            @if(placeholder)<option selected value="{{ item.name }}" disabled> {{placeholder}}</option>@endif
+            {{content}}
+            </select>`,
+            script: 'console.log("initialized select", $el)'
+        },
+        'Option': {
+            template: `<option@if(selected) selected @endif>{{value}}</option>`
+        },
+        // 'Home': {
+        //     template: `
+        //     @head
+        //         <title>Head</title>
+        //     @endhead
+        //     @include('Select', {
+        //         name: 'name',
+        //         id: 'nameInput',
+        //         placeholder: 'انتخاب نام',
+        //     })
+        //         @for (n in names)
+        //             @include("Option", {value: n, selected: n === name})
+        //             @endinclude
+        //         @endfor
+        //     @endinclude
+        //     `,
+        //     script: 'console.log("initialized Home", $el)'
 
-//         }
-//         // Home: {
-//         //     template: '<div>Hello {{name}}{{name2}}{{name}}</div>'
-//         // }
-//     }
-// })
-// const {html, script, head} = await engine.render({ name: 'Home', props: { name: 'hi', names: ['hi', 'di'] }})
-// console.log({html, script, head})
+        // }
+        Home: {
+            template: '@head<title>Title</title>@endhead<div>Hello {{name}}{{name2}}{{name}}</div>'
+        }
+    }
+})
+const {html, script, head} = await engine.render({ name: 'Home', props: { name: 'hi', names: ['hi', 'di'] }})
+console.log({html, script, head})
 
 // <div class="something">
 {/* <select name="name" id="nameInput" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">

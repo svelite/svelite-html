@@ -90,10 +90,10 @@ async function renderPage(page, loadParams, config) {
     const engine = createEngine({ templates })
 
 
-    let head = Promise.resolve(() => '')
+    let head = ''
 
     if (config.config?.tailwindcss) {
-        head = buildcss().then(css => `<style>${css}</style>`)
+        head = await buildcss().then(css => `<style>${css}</style>`)
     }
 
     script += `
@@ -101,7 +101,7 @@ async function renderPage(page, loadParams, config) {
 		return {
 			async post(data, headers = {}) {
 
-				return fetch(window.location.origin + path, {
+				const res = await fetch(window.location.origin + path, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
@@ -109,6 +109,7 @@ async function renderPage(page, loadParams, config) {
 					},
 					body: JSON.stringify(data)
 				}).then(res => res.json())
+                return res
 			}
 		}
 	}
@@ -132,11 +133,14 @@ async function renderPage(page, loadParams, config) {
 
     let res = ''
     for (let content of page.content) {
-        res += await engine.render(content, loadParams)
+        const response = await engine.render(content, loadParams)
+
+        res += response.html
+        head += response.head
+        
     }
 
-    const resp = { html: res, script, head: await head }
-    console.log('returning: ', resp)
+    const resp = { html: res, script, head }
 
     return resp
 }
@@ -174,7 +178,6 @@ function pagesMiddleware(pages, config) {
     const router = express.Router()
 
     for (let page of pages) {
-        console.log('register page', page.slug)
         registerPage(page, config, router)
     }
 
@@ -220,7 +223,6 @@ function registerPage(page, config, router) {
 
 function routesMiddleware(routes) {
     return async (req, res, next) => {
-        console.log(req.url)
         const slugs = req.url.split('?')[0].split('/').slice(1)
 
 
@@ -261,7 +263,7 @@ export function createApp(config) {
     }
 
     app.use((req, res) => {
-        res.end('404 Not found')
+        res.status(404).end('404 Not found')
     })
 
     const listen = (port) => {

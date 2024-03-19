@@ -75,6 +75,12 @@ export function renderVariables(template, props, stringify) {
         if(stack.at(-1) === '@endinclude' && template.slice(i).startsWith('@endinclude')) {
             stack.pop()
         }
+        if(template.slice(i).startsWith('@head')) {
+            stack.push('@endhead')
+        }
+        if(stack.at(-1) === '@endhead' && template.slice(i).startsWith('@endhead')) {
+            stack.pop()
+        }
         
         if(template[i] === '{' && template[i+1] === '{') {
             index = i
