@@ -336,31 +336,35 @@ function render(template, props, templates) {
 export default function createEngine({ templates }) {
 
     return {
-        async render(include, loadParams) {
-            const name = include.name
-            let props = include.props ?? {}
-            props.content = props.content ?? include.content ?? []
+        async render(component, loadParams) {
+            const name = component.name
+            let props = component.props ?? {}
+            props.content = props.content ?? component.content ?? []
 
             if (templates[name].load) {
                 const loadProps = await templates[name].load(loadParams)
                 props = { ...props, ...loadProps }
             }
 
+            let head = component.head
             if (props.content) {
                 let res = ''
                 for (let content of props.content) {
-                    res += await this.render(content, loadParams)
+                    const response = await this.render(content, loadParams)
+                    res += response.html
+                    head += response.head ?? ''
                 }
                 props.content = res
             }
 
-            const html = render(templates[name].template, props, templates)
+            let html = render(templates[name].template, props, templates)
+
 
             console.log('res')
             if(html.startsWith('<')) {
-                return `<!--include:${name}-->` + html
+                html = `<!--include:${name}-->` + html
             }
-            return html
+            return {html, head }
         }
     }
 }
