@@ -85,8 +85,6 @@ export function renderVariables(template, props, stringify) {
             stack.pop()
             if(stack.length == 0) {
                 const variable = template.slice(index + 2, i )
-
-                console.log("Variable: ", variable)
                 
                 pre = template.slice(0, index)
                 post = template.slice(i + 2)

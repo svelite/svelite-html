@@ -73,7 +73,6 @@ function getCondition(template, index) {
 }
 
 function getBlock(template, index, endtags, skipOn) {
-    console.log('getBlock', template.slice(index), {endtags, skipOn})
 
     let stack = 0;
     for (let i = index; i < template.length; i++) {
@@ -85,15 +84,12 @@ function getBlock(template, index, endtags, skipOn) {
 
             for (let tag of endtags) {
                 if (template.slice(i).startsWith(tag)) {
-                    console.log('found tag', template.slice(i), tag)
 
                     // const tagIndex = template.indexOf(tag, index)
                     const start = index + 1
                     const end = i
 
                     let result = template.slice(start, end).trim()
-
-                    console.log(result[0])
 
                     if(result[0] != '<') {
                         result = ' ' + result
@@ -238,10 +234,7 @@ function getComponentTag(template, index) {
     let name = getComponentName(template, index + '@include'.length)
     let props = getObject(template, name.end)
 
-    console.log('getBlock', template.slice(props.end + 1))
     let content = getBlock(template, props.end + 1, ['@endinclude'], ['@include', '@endinclude'])
-
-    console.log({content})
 
 
     const result = {
@@ -273,7 +266,6 @@ function findNextTag(template) {
 }
 
 function applyTag(template, props, tag, templates) {
-    console.log('applyTag', tag)
 
     function getContent() {
         if (tag.result.type == 'if') {
@@ -310,30 +302,16 @@ function applyTag(template, props, tag, templates) {
         } else if (tag.result.type === 'include') {
             const template = templates[tag.result.name].template
 
-            console.log(props)
-            console.log('start evaluate', `(${tag.result.props})`, props)
             const props2 = evaluate(`(${tag.result.props})`, props)
-            console.log('end evaluate')
-            console.log(props2)
-
-            // for (let key in tag.result.props) {
-            //     if (tag.result.props[key].startsWith('{')) {
-
-            //         console.log('calling renderVariable include prop')
-            //         tag.result.props[key] = renderVariable(`${tag.result.props[key]}`, props, true)
-            //         if (typeof tag.result.props[key] === 'string') {
-            //             tag.result.props[key] = JSON.parse(tag.result.props[key])
-            //         }
-            //     }
-            // }
-            // console.log("tag.result.props", tag.result.props)
-
-            // return render(template, { content: render(tag.result.content, props, templates), ...tag.result.props }, templates)
 
             props2.content = render(tag.result.content, props, templates)
             const res = render(template, props2, templates)
-            console.log({res})
-            return res
+            
+            console.log('res')
+            if(res.startsWith('<')) {
+                return `<!--include:${tag.result.name}-->` + res
+            }
+            return   res
         }
     }
 
@@ -342,11 +320,7 @@ function applyTag(template, props, tag, templates) {
 }
 
 function render(template, props, templates) {
-    console.log('render', template, props)
-
     let result = renderVariables(template, props);
-
-    console.log(result)
 
     const tag = findNextTag(result)
 
@@ -356,7 +330,7 @@ function render(template, props, templates) {
         return render(result, props, templates)
     }
 
-    return result;
+    return result.trim();
 }
 
 export default function createEngine({ templates }) {
@@ -380,55 +354,63 @@ export default function createEngine({ templates }) {
                 props.content = res
             }
 
-            return render(templates[name].template, props, templates)
-            
+            const html = render(templates[name].template, props, templates)
+
+            console.log('res')
+            if(html.startsWith('<')) {
+                return `<!--include:${name}-->` + html
+            }
+            return html
         }
     }
 }
 
-const engine = createEngine({
-    // templates: {
-    //     Home: {
-    //         template: '@include("Test", {name}) abc @endinclude'
-    //     },
-    //     Test: {
-    //         template: '<name>{name}</name><content>{content}</content>'
-    //     }
-    // }
-    templates: {
-        // "Home": {
-        //     template: `<div>@for (i in names) {i} @endfor</div>`
-        // }
-        'Select': {
-            template: `<select name="{{name}}" id="{{id}}" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">
-            @if(placeholder)<option selected value="{{ item.name }}" disabled> {{placeholder}}</option>@endif
-            {{content}}
-            </select>`
-        },
-        'Option': {
-            template: `<option@if(selected) selected @endif>{{value}}</option>`
-        },
-        'Home': {
-            template: `
-            @include('Select', {
-                name: 'name',
-                id: 'nameInput',
-                placeholder: 'انتخاب نام',
-            })
-                @for (n in names)
-                    @include("Option", {value: n, selected: n === name})
-                    @endinclude
-                @endfor
-            @endinclude
-            `
-        }
-        // Home: {
-        //     template: '<div>Hello {{name}}{{name2}}{{name}}</div>'
-        // }
-    }
-})
-const rendered = await engine.render({ name: 'Home', props: { name: 'hi', names: ['hi', 'di'] }})
-console.log(rendered)
+// const engine = createEngine({
+//     // templates: {
+//     //     Home: {
+//     //         template: '@include("Test", {name}) abc @endinclude'
+//     //     },
+//     //     Test: {
+//     //         template: '<name>{name}</name><content>{content}</content>'
+//     //     }
+//     // }
+//     templates: {
+//         // "Home": {
+//         //     template: `<div>@for (i in names) {i} @endfor</div>`
+//         // }
+//         'Select': {
+//             template: `<select name="{{name}}" id="{{id}}" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">
+//             @if(placeholder)<option selected value="{{ item.name }}" disabled> {{placeholder}}</option>@endif
+//             {{content}}
+//             </select>`,
+//             script: 'console.log("initialized select", $el)'
+//         },
+//         'Option': {
+//             template: `<option@if(selected) selected @endif>{{value}}</option>`
+//         },
+//         'Home': {
+//             template: `
+//             @include('Select', {
+//                 name: 'name',
+//                 id: 'nameInput',
+//                 placeholder: 'انتخاب نام',
+//             })
+//                 @for (n in names)
+//                     @include("Option", {value: n, selected: n === name})
+//                     @endinclude
+//                 @endfor
+//             @endinclude
+//             `,
+//             script: 'console.log("initialized Home", $el)'
+
+//         }
+//         // Home: {
+//         //     template: '<div>Hello {{name}}{{name2}}{{name}}</div>'
+//         // }
+//     }
+// })
+// const {html, script, head} = await engine.render({ name: 'Home', props: { name: 'hi', names: ['hi', 'di'] }})
+// console.log({html, script, head})
 
 // <div class="something">
 {/* <select name="name" id="nameInput" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">

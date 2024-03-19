@@ -1,0 +1,14 @@
+<div>Test</div>
+<script>
+    function Test($el) {
+        console.log('Test initialized: ', $el)
+
+        let count =0
+        $el.addEventListener('click', () => {
+            count += 1
+            console.log('clicked', count)
+            $el.textContent = count
+
+        })
+    }
+</script>

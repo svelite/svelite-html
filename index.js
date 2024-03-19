@@ -51,18 +51,22 @@ function ctxMiddleware(ctx) {
 }
 
 function parse(template) {
-    console.log(template)
     const serverRegex = /<script server>([\s\S]*?)<\/script>/;
+    const clientRegex = /<script>([\s\S]*?)<\/script>/;
 
     const serverScriptMatch = template.match(serverRegex);
+    const clientScriptMatch = template.match(clientRegex);
 
     const serverScript = serverScriptMatch ? serverScriptMatch[1].trim() : null;
+    const clientScript = clientScriptMatch ? clientScriptMatch[1].trim() : null;
 
     const load = eval('(' + serverScript + ')')
 
+
     return {
-        template: template.replace(serverRegex, ''),
-        load
+        template: template.replace(serverRegex, '').replace(clientRegex, ''),
+        load,
+        script: clientScript
     }
 }
 
@@ -70,11 +74,14 @@ async function renderPage(page, loadParams, config) {
 
     const templates = {}
     const components = await readdir(config.config.components)
+    let script = `const components = {};`
 
     for (let component of components) {
         const content = await readFile(path.join(config.config.components, component), 'utf-8')
         const name = component.replace('.html', '')
         templates[name] = parse(content)
+        script += `components["${name}"] = ($el) => {${templates[name].script ?? ''}; ${name}($el)};\n`
+
     }
 
     const engine = createEngine({ templates })
@@ -86,30 +93,8 @@ async function renderPage(page, loadParams, config) {
         head = buildcss().then(css => `<style>${css}</style>`)
     }
 
-    let res = ''
-    for (let content of page.content) {
-        res += await engine.render(content, loadParams)
-    }
-
-    return { html: res, head: await head }
-}
-
-const template = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!--head-->
-</head>
-<body>
-    <!--body-->
-
-</body>
-</html>`
-
-const script = `
-window.svelite = {
-	api(path) {
+    script += `
+    function api(path) {
 		return {
 			async post(data, headers = {}) {
 
@@ -124,12 +109,66 @@ window.svelite = {
 			}
 		}
 	}
+    function initialize(el) {
+        const allElements = el.querySelectorAll('*');
+
+        allElements.forEach(element => {
+            element.childNodes.forEach(child => {
+                if (child.nodeType === Node.COMMENT_NODE) {
+                    const value = child.nodeValue.trim()
+                    if(value.startsWith('include:')) {
+                        const name = value.split(':')[1]
+                        components[name](child.nextElementSibling)
+                    }
+                }
+            })
+            if (element.nodeType === Node.ELEMENT_NODE) {
+                initialize(element)
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initialize(document.body.parentElement);
+    })`
+
+    let res = ''
+    for (let content of page.content) {
+        res += await engine.render(content, loadParams)
+    }
+
+    const resp = { html: res, script, head: await head }
+    console.log('returning: ', resp)
+
+    return resp
+}
+
+const template = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--head-->
+</head>
+<body>
+    <!--body-->
+    <!--script-->
+</body>
+</html>`
+
+const script = `
+window.svelite = {
+	
 }
 
 window.onMount = (cb) => {
     document.addEventListener('DOMContentLoaded', (ev) => {
         cb({api: svelite.api}) /** add more */
     })
+}
+
+window.$info = () => {
+    return {el: '123', props: {todo: '123'}}
 }
 `
 
@@ -169,11 +208,12 @@ function registerPage(page, config, router) {
         }
 
 
-        const { head, html } = await renderPage(page, { url, params, query, cookies, baseUrl, api }, config)
+        const { head, html, script } = await renderPage(page, { url, params, query, cookies, baseUrl, api }, config)
 
         const response = template
             .replace('<!--body-->', html)
-            .replace('<!--head-->', head + `<script>${script}</script>`)
+            .replace('<!--script-->', `<script>${script}</script>`)
+            .replace('<!--head-->', head)
 
         res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
         return res.end(response)
