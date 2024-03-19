@@ -380,7 +380,7 @@ export default function createEngine({ templates }) {
             let head = {}
             head[component.template] = component.head ?? ''
 
-            if (templates[name].load) {
+            if (templates[name]?.load) {
                 const loadProps = await templates[name].load(loadParams)
                 props = { ...props, ...loadProps }
             }
@@ -394,7 +394,7 @@ export default function createEngine({ templates }) {
                 props.content = res
             }
 
-            let result = render(templates[name].template, props, templates, head)
+            let result = render(templates[name]?.template ?? `template ${name} not found.`, props, templates, head)
 
 
             console.log('res')

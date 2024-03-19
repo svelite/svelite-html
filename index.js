@@ -7,10 +7,9 @@ import tailwindcss from 'tailwindcss'
 import createEngine from './render.js'
 
 async function buildcss(config) {
+    
     return postcss([
-        tailwindcss({
-            content: ['./**/*.html', './app.config.js']
-        })
+        tailwindcss(config)
     ]).process(`@tailwind base;
 @tailwind components;
 @tailwind utilities;`).then(res => {
@@ -93,7 +92,11 @@ async function renderPage(page, loadParams, config) {
     let head = ''
 
     if (config.config?.tailwindcss) {
-        head = await buildcss().then(css => `<style>${css}</style>`)
+        const defaultTailwindConfig = {
+            content: ['./**/*.html', './app.config.js']
+        }
+        const tailwindConfig = config.config.tailwindcss === true ? defaultTailwindConfig : config.config.tailwindcss
+        head = await buildcss(tailwindConfig).then(css => `<style>${css}</style>`)
     }
 
     script += `
