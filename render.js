@@ -393,17 +393,17 @@ function applyTag(template, props, tag, templates, head) {
             }
 
             if (result) {
-                return tag.result.block
+                return render(tag.result.block, props, templates, head).html
             }
             for (let elseif of tag.result.elseifs) {
 
                 const result = evaluate(renderVariable(`{${elseif.condition}}`, props), props)
 
                 if (result) {
-                    return elseif.block
+                    return render(elseif.block, props, templates, head).html
                 }
             }
-            return tag.result.else
+            return render(tag.result.else, props, templates, head).html
         } else if (tag.result.type == 'for') {
 
             const rendered = renderVariable(`{${tag.result.iterator}}`, props, true)
@@ -492,14 +492,21 @@ export default function createEngine({ templates }) {
             }
 
             if (props.content && Array.isArray(props.content)) {
-                let res = ''
-                for (let content of props.content) {
-                    console.log('calling this.render', content)
-                    const response = await this.render(content, loadParams)
-                    res += response.html
-                }
-                props.content = res
+		    props.content = {default: props.content}
             }
+		if(props.content && typeof props.content === 'object') {
+		for(let key in props.content) {
+			let res = ''
+			for (let content of props.content[key]) {
+
+			    const response = await this.render(content, loadParams)
+			    res += response.html
+		     
+			}
+			props['slot_' + key] = res
+		}
+
+	    }
 
             let result = render(templates[name]?.template ?? `template ${name} not found.`, props, templates, head)
 
