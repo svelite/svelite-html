@@ -1,4 +1,11 @@
-<div>Test</div>
+<div id="test">1@include('Test')
+    Test2
+    @endinclude2
+    @include('Test')
+    Test2
+    @endinclude2
+</div>
+({{content}})
 <script>
     function Test($el) {
         console.log('Test initialized: ', $el)

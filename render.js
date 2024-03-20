@@ -246,7 +246,7 @@ function getComponentTag(template, index) {
 
     return {
         start: index,
-        end: (content?.end ?? props.end) + '@endinclude'.length,
+        end: (content?.end ?? props.end ?? name.end) + '@endinclude'.length,
         result
     }
 }
@@ -322,13 +322,15 @@ function applyTag(template, props, tag, templates, head) {
 
             const props2 = evaluate(`(${tag.result.props})`, props)
 
+            console.log('1', tag.result.content)
             const rendered = render(tag.result.content, props, templates, head)
             props2.content = rendered.html
             // head += rendered.head
-            const rendered2 = render(template, props2, templates, head)
-            const res = rendered2.html
+            // console.log('2', template)
+            // const rendered2 = render(template, props2, templates, head)
+            // const res = rendered2.html
             // head += rendered2.html
-            
+            let res = props2.content
             if(res.startsWith('<')) {
                 return `\n<!--include:${tag.result.name}-->` + res
             }
@@ -370,18 +372,21 @@ export default function createEngine({ templates }) {
         async render(component, loadParams) {
             const name = component.name
             let props = component.props ?? {}
-            props.content = props.content ?? component.content ?? []
+            props.content = component.content ?? []
             let head = {}
             head[component.template] = component.head ?? ''
+
+            if(!templates[name]) return ''
 
             if (templates[name]?.load) {
                 const loadProps = await templates[name].load(loadParams)
                 props = { ...props, ...loadProps }
             }
 
-            if (props.content) {
+            if (props.content && Array.isArray(props.content)) {
                 let res = ''
                 for (let content of props.content) {
+                    console.log('calling this.render', content)
                     const response = await this.render(content, loadParams)
                     res += response.html
                 }

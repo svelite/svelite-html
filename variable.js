@@ -26,6 +26,7 @@ export function renderVariable(template, props, stringify) {
 }
 
 export function renderVariables(template, props, stringify) {
+    console.log({template, props})
     if(!template) return ''
 
     let pre = ''
@@ -94,9 +95,14 @@ export function renderVariables(template, props, stringify) {
                 
                 pre = template.slice(0, index)
                 post = template.slice(i + 2)
+
+                console.log({index, i, template})
+
+                console.log({pre, center: {variable, props}, end: {post, props}})
                 return pre + renderVariable(variable, props, stringify) + renderVariables(post, props, stringify)
             }
         }   
     }
+    console.log('return template: ', template)
     return template;
 }
