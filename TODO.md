@@ -15,3 +15,10 @@ also should update components path...
 {componentContent}
 @endinclude
 
+
+## support folder for components
+
+## question: should we rename components folder to views?
+
+## api should support get Method even if there is a page with same url (accept: application/json)
+

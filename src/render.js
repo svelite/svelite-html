@@ -11,7 +11,7 @@ function findMatchingPair(template, index, char) {
     return -1
 }
 
-function findNextElseIf(template, index) {
+function findNextElseIf(template, index, tags) {
     let skips = 0
     for (let i = index; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
@@ -24,7 +24,7 @@ function findNextElseIf(template, index) {
             const start = i + '@elseif'.length
             const condition = getCondition(template, start)
 
-            const block = getBlock(template, condition.end, ['@else', '@end'], ['@if'])
+            const block = getBlock(template, condition.end, ['@else', '@end'], tags)
 
             const result = {
                 start,
@@ -41,7 +41,7 @@ function findNextElseIf(template, index) {
     return null
 }
 
-function findElse(template, index) {
+function findElse(template, index, tags) {
     let skips = 0
     for (let i = index; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
@@ -53,7 +53,7 @@ function findElse(template, index) {
         else if (template.slice(i).startsWith('@elseif')) {
         }
         else if (template.slice(i).startsWith('@else')) {
-            return getBlock(template, i + '@else'.length, ['@end'], ['@if'])
+            return getBlock(template, i + '@else'.length, ['@end'], tags)
         }
     }
     return null
@@ -71,15 +71,16 @@ function getCondition(template, index) {
     }
 }
 
-function getBlock(template, index, endtags, skipOn) {
-    let skips = ['@if', '@include', '@for', '@head', '@slot']
+function getBlock(template, index, endtags, tags) {
+    // let skips = ['@if', '@include', '@for', '@head', '@slot']
 
     let stack = 0;
+    
     for (let i = index; i < template.length; i++) {
-        for(let skip of skips) {
-            if (template.slice(i).startsWith(skip)) {
+        for (let tag of tags) {
+            if (template.slice(i).startsWith(tag)) {
                 stack += 1;
-            }    
+            }
         }
 
         if (stack == 0) {
@@ -93,11 +94,10 @@ function getBlock(template, index, endtags, skipOn) {
 
                     let result = template.slice(start, end).trim()
 
-                    if(result[0] != '<') {
+                    if (result[0] != '<') {
                         result = ' ' + result
                     }
 
-                    console.log('result of getBlock: ', result)
                     return {
                         start,
                         end,
@@ -118,17 +118,18 @@ function getBlock(template, index, endtags, skipOn) {
 
 }
 
-function getIfTag(template, index) {
+function getIfTag(template, index, tags) {
     const condition = getCondition(template, index)
 
     let lastIndex;
-    const block = getBlock(template, condition.end, ['@elseif', '@else', '@end'], ['@if', '@for'])
+    let customTags = tags.filter(x => x!== '@elseif' && x!== '@else')
+    const block = getBlock(template, condition.end, ['@elseif', '@else', '@end'], tags)
     if (block) {
         lastIndex = block.end
     }
 
     let elseifs = []
-    let elseif = findNextElseIf(template, condition.end)
+    let elseif = findNextElseIf(template, condition.end, customTags)
 
     if (elseif) {
         lastIndex = elseif.end
@@ -137,10 +138,10 @@ function getIfTag(template, index) {
     while (elseif) {
         elseifs.push(elseif.result)
         lastIndex = elseif.end
-        elseif = findNextElseIf(template, lastIndex)
+        elseif = findNextElseIf(template, lastIndex, customTags)
     }
 
-    const elseBlock = findElse(template, lastIndex)
+    const elseBlock = findElse(template, lastIndex, customTags)
     if (elseBlock) {
         lastIndex = elseBlock.end
     }
@@ -160,7 +161,7 @@ function getIfTag(template, index) {
     }
 }
 
-function getForTag(template, index) {
+function getForTag(template, index, tags) {
     const start = index
     let end = start
 
@@ -170,7 +171,7 @@ function getForTag(template, index) {
     const iterator = template.slice(iteratorStart, iteratorEnd);
     const [key, list] = iterator.split(' in ');
 
-    const block = getBlock(template, iteratorEnd, ['@end'], ['@for'])
+    const block = getBlock(template, iteratorEnd, ['@end'], tags)
 
     if (block) {
         end = block.end + '@end'.length
@@ -193,11 +194,11 @@ function getComponentName(template, index) {
 
     for (let i = index; i < template.length; i++) {
 
-        if (template[i] === ',' || template[i] === ')') {
+        if (template[i] === '(') {
             const endName = i
             return {
                 start: index + 1,
-                end: endName -1,
+                end: endName - 1,
                 result: template.slice(index + 1, endName).replace(/'/g, '').replace(/"/g, '')
             }
         }
@@ -208,10 +209,10 @@ function getObject(template, index) {
     let stack = 0
     let start = index
 
-    for(let i=index; i<template.length; i++) {
+    for (let i = index; i < template.length; i++) {
         const char = template[i]
 
-        if(stack === 0 && char === ')') {
+        if (stack === 0 && char === ')') {
             return {
                 start: i,
                 end: i,
@@ -219,19 +220,19 @@ function getObject(template, index) {
             }
         }
 
-        if(char === '{') {
-            stack +=1
-            if(stack === 1) {
+        if (char === '{') {
+            stack += 1
+            if (stack === 1) {
                 start = i
             }
         }
-        if(char === '}' && stack > 0) {
-            stack -=1
+        if (char === '}' && stack > 0) {
+            stack -= 1
 
-            if(stack === 0) {
+            if (stack === 0) {
                 return {
                     start,
-                    end: i +1,
+                    end: i + 1,
                     result: template.slice(start, i + 1)
                 }
             }
@@ -240,14 +241,14 @@ function getObject(template, index) {
     return null
 }
 
-function getComponentTag(template, index) {
+function getComponentTag(template, index, tags) {
     // TODO: Implement
-    let name = getComponentName(template, index + '@include'.length)
+    let name = getComponentName(template, index)
 
     let props = getObject(template, name.end)
 
 
-    let content = getBlock(template, (props?.end ?? name.end), ['@end'], ['@include', '@slot'])
+    let content = getBlock(template, (props?.end ?? name.end), ['@end'], tags)
 
 
     function extractSections(input) {
@@ -255,69 +256,41 @@ function getComponentTag(template, index) {
         let stack = 0
         let key = 'slot_default'
         sections[key] = ''
-        for(let i=0; i<input.length; i++) {
-            if(input.slice(i).startsWith('@slot')) {
+        for (let i = 0; i < input.length; i++) {
+            if (input.slice(i).startsWith('@slot')) {
                 const slot = getSlotTag(input, i);
                 key = 'slot_' + slot.result.name
                 sections[key] ??= ''
                 i = slot.end
             } else {
-                let tags = ['@if', '@head', '@include', '@slot', '@for', '@elseif', '@else']
 
-                for(let tag of tags) {
-                    if(input.slice(i).startsWith(tag)) {
+                for (let tag of tags) {
+                    if (input.slice(i).startsWith(tag)) {
                         stack += 1
                     }
                 }
 
-                if(input.slice(i).startsWith('@end')) {
+                if (input.slice(i).startsWith('@end')) {
                     stack -= 1
-                    
-                    if(key !== 'slot_default')
+
+                    if (key !== 'slot_default')
                         i += 4
 
-                    if(stack == 0) {
+                    if (stack == 0) {
                         key = 'slot_default'
                     }
                 }
             }
-            
-            if(input[i]) {
+
+            if (input[i]) {
                 sections[key] += input[i]
             }
         }
 
         return sections
-        // console.log('extractSections', input)
-        // const regex = /@slot\(['"]([^'"]+)['"]\)([\s\S]*?)@end/g;
-        // let match;
-        // let sections = {};
-        // let defaultContent = '';
-    
-        // while ((match = regex.exec(input)) !== null) {
-        //     const sectionName = match[1];
-        //     const sectionContent = match[2].trim();
-        //     sections['slot_' + sectionName] = sectionContent;
-        // }
-    
-        // // Extract content outside of sections
-        // const remainingContent = input.replace(regex, '').trim();
-        // if (remainingContent) {
-        //     defaultContent = remainingContent;
-        // }
-    
-        // // If there's content outside sections, add it to default
-        // if (defaultContent) {
-        //     sections.slot_default = defaultContent;
-        // }
-    
-        // return sections;
     }
-    
-    const slots = extractSections(content?.result ?? '');
 
-    
-    // handle other slots
+    const slots = extractSections(content?.result ?? '');
 
     const result = {
         type: 'include',
@@ -333,9 +306,9 @@ function getComponentTag(template, index) {
     }
 }
 
-function getHeadTag(template, index) {
+function getHeadTag(template, index, tags) {
 
-    const block = getBlock(template, index + 'head'.length, ['@end'], [])
+    const block = getBlock(template, index + 'head'.length, ['@end'], tags)
 
     return {
         start: index,
@@ -359,7 +332,7 @@ function getPropsTag(template, i) {
             .map(x => x.trim())
             .map(x => x.slice(1, x.length - 1))
     }
-    
+
     return {
         start: i,
         end: endIndex + 1,
@@ -381,7 +354,7 @@ function getSlotTag(template, i) {
         type: 'slot',
         name
     }
-    
+
     return {
         start: i,
         end: endIndex + 1,
@@ -390,56 +363,59 @@ function getSlotTag(template, i) {
     }
 }
 
-function findNextTag(template) {
+function findNextTag(template, tags) {
+
     for (let i = 0; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
             // also supports @elseif and @else
-            return getIfTag(template, i)
+            return getIfTag(template, i, tags)
         }
         if (template.slice(i).startsWith('@for')) {
-            return getForTag(template, i)
-        }
-        if (template.slice(i).startsWith('@include')) {
-            // also supports @slot
-            return getComponentTag(template, i)
+            return getForTag(template, i, tags)
         }
         if (template.slice(i).startsWith('@head')) {
-            return getHeadTag(template, i)
+            return getHeadTag(template, i, tags)
         }
         if (template.slice(i).startsWith('@props')) {
-            return getPropsTag(template, i)
+            return getPropsTag(template, i, tags)
         }
         if (template.slice(i).startsWith('@slot')) {
-            return getSlotTag(template, i)
+            return getSlotTag(template, i, tags)
+        }
+
+        for (let tag of tags) {
+            if (template.slice(i).startsWith(tag)) {
+                return getComponentTag(template, i, tags)
+            }
         }
     }
 }
 
-function applyTag(template, props, tag, templates, head) {
+function applyTag(template, props, tag, templates, head, tags) {
 
     function getContent() {
         if (tag.result.type == 'if') {
-            let result; 
+            let result;
 
             try {
                 const variable = renderVariable(`{${tag.result.condition}}`, props)
                 result = evaluate(variable, props)
-            } catch(err) {
+            } catch (err) {
                 result = false;
             }
 
             if (result) {
-                return render(tag.result.block, props, templates, head).html
+                return render(tag.result.block, props, templates, head, tags).html
             }
             for (let elseif of tag.result.elseifs) {
 
                 const result = evaluate(renderVariable(`{${elseif.condition}}`, props), props)
 
                 if (result) {
-                    return render(elseif.block, props, templates, head).html
+                    return render(elseif.block, props, templates, head, tags).html
                 }
             }
-            return render(tag.result.else, props, templates, head).html
+            return render(tag.result.else, props, templates, head, tags).html
         } else if (tag.result.type == 'for') {
 
             const rendered = renderVariable(`{${tag.result.iterator}}`, props, true)
@@ -447,7 +423,7 @@ function applyTag(template, props, tag, templates, head) {
 
             let res = ''
             for (let item of iterator) {
-                const result = render(tag.result.block, { ...props, [tag.result.item]: item }, templates, head)
+                const result = render(tag.result.block, { ...props, [tag.result.item]: item }, templates, head, tags)
                 res += result.html
                 // head += result.head
             }
@@ -456,30 +432,30 @@ function applyTag(template, props, tag, templates, head) {
             const componentProps = tag.result.props ? evaluate(`(${tag.result.props})`, props) : {};
 
             const template = templates[tag.result.name]?.template
-            
-            for(let slot in tag.result.slots) {
-                componentProps[slot] = render(tag.result.slots[slot], props, templates, head).html;
-            }
-            
-            let res = render(template, componentProps, templates, head).html;
 
-            if(res.startsWith('<') && !res.startsWith('<!--')) {
+            for (let slot in tag.result.slots) {
+                componentProps[slot] = render(tag.result.slots[slot], props, templates, head, tags).html;
+            }
+
+            let res = render(template, componentProps, templates, head, tags).html;
+
+            if (res.startsWith('<') && !res.startsWith('<!--')) {
                 res = `<!--include:${tag.result.name}-->` + res
             }
-            
+
             return res;
-        } else if(tag.result.type === 'head') {
-            head[template] = render(tag.result.content, props, templates, '').html
+        } else if (tag.result.type === 'head') {
+            head[template] = render(tag.result.content, props, templates, {}, tags).html
 
             return ''
-        } else if(tag.result.type === 'props') {
-            for(let item of tag.result.props) {
+        } else if (tag.result.type === 'props') {
+            for (let item of tag.result.props) {
                 props[item] = undefined
             }
             return ''
         }
-        else if(tag.result.type === 'slot') {
-            const content = render(props['slot_' + tag.result.name], props, templates, head).html
+        else if (tag.result.type === 'slot') {
+            const content = render(props['slot_' + tag.result.name], props, templates, head, tags).html
             return content
         }
     }
@@ -491,15 +467,15 @@ function applyTag(template, props, tag, templates, head) {
 
 }
 
-function render(template, props, templates, head = {}) {
+function render(template, props, templates, head = {}, tags) {
     let result = renderVariables(template, props);
 
-    const tag = findNextTag(result)
+    const tag = findNextTag(result, tags)
 
     if (tag) {
-        result = applyTag(result, props, tag, templates, head)
+        result = applyTag(result, props, tag, templates, head, tags)
 
-        return render(result.html, props, templates, head)
+        return render(result.html, props, templates, head, tags)
     }
 
     return {
@@ -518,7 +494,7 @@ export default function createEngine({ templates }) {
             let head = {}
             head[component.template] = component.head ?? ''
 
-            if(!templates[name]) return ''
+            if (!templates[name]) return ''
 
             if (templates[name]?.load) {
                 const loadProps = await templates[name].load(loadParams)
@@ -526,28 +502,43 @@ export default function createEngine({ templates }) {
             }
 
             if (props.content && Array.isArray(props.content)) {
-		    props.content = {default: props.content}
+                props.content = { default: props.content }
             }
-		if(props.content && typeof props.content === 'object') {
-		for(let key in props.content) {
-			let res = ''
-			for (let content of props.content[key]) {
+            if (props.content && typeof props.content === 'object') {
+                for (let key in props.content) {
+                    let res = ''
+                    for (let content of props.content[key]) {
 
-			    const response = await this.render(content, loadParams)
-			    res += response.html
-		     
-			}
-			props['slot_' + key] = res
-		}
+                        const response = await this.render(content, loadParams)
+                        res += response.html
 
-	    }
+                    }
+                    props['slot_' + key] = res
+                }
 
-            let result = render(templates[name]?.template ?? `template ${name} not found.`, props, templates, head)
+            }
 
-            if(result.html.startsWith('<')) {
+            const tags = ['@if', '@for', '@slot', '@head']
+
+            function addTemplateTags(name, template) {
+                tags.push(name)
+                if(template.sub) {
+                    for(let subItem in template.sub) {
+                        addTemplateTags(name + '.' + subItem, subItem)
+                    }
+                }
+            } 
+            
+            for(let key in templates) {
+                addTemplateTags('@' + key, templates[key])                
+            }
+            
+            let result = render(templates[name]?.template ?? `template ${name} not found.`, props, templates, head, tags)
+
+            if (result.html.startsWith('<')) {
                 result.html = `<!--include:${name}-->` + result.html
             }
-            return {html: result.html, head: Object.keys(result.head).map(x => result.head[x]).join('') }
+            return { html: result.html, head: Object.keys(result.head).map(x => result.head[x]).join('') }
         }
     }
 }

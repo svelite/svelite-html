@@ -15,7 +15,7 @@ export function renderVariable(template, props, stringify) {
 
         return res
     } catch (err) {
-        console.log(err.message)
+        // console.log(err.message)
         return ''
     }
 }
@@ -62,9 +62,7 @@ export function renderVariables(template, props, stringify) {
         if(template.slice(i).startsWith('@if')) {
             stack.push('tag')
         }
-        if(template.slice(i).startsWith('@include')) {
-            stack.push('tag')
-        }
+        
         if(template.slice(i).startsWith('@head')) {
             stack.push('tag')
         }

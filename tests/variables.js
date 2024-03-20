@@ -1,4 +1,4 @@
-// test.ava.js
+// // test.ava.js
 import test from 'ava';
 import createEngine from '../src/render.js'; // Adjust the import path
 
@@ -108,7 +108,7 @@ test('renders loop inside condition', async t => {
 test('renders component', async t => {
     const templates = {
         Home: {
-            template: 'Hello, @include("Test") @end!'
+            template: 'Hello, @Test() @end!'
         },
         Test: {
             template: '<div>Test</div>'
@@ -121,7 +121,7 @@ test('renders component', async t => {
 test('renders component with props', async t => {
     const templates = {
         Home: {
-            template: 'Hello, @include("Test", {a: "abc", b: 123}) @end!'
+            template: 'Hello, @Test({a: "abc", b: 123}) @end!'
         },
         Test: {
             template: '<div>num: {{b}} | str: {{a}}</div>'
@@ -135,7 +135,7 @@ test('renders component with props', async t => {
 test('renders multiple components with props', async t => {
     const templates = {
         Home: {
-            template: 'Hello, @include("Test1", {a: "abc", b: 123}) @end@include("Test2", {c: "def", d: 456}) @end!'
+            template: 'Hello, @Test1({a: "abc", b: 123}) @end@Test2({c: "def", d: 456}) @end!'
         },
         Test1: {
             template: '<div>num: {{b}} | str: {{a}}</div>'
@@ -151,7 +151,7 @@ test('renders multiple components with props', async t => {
 test('renders component inside condition', async t => {
     const templates = {
         Home: {
-            template: '<div>@if(condition)@include("Test", {a: ds, b: 123}) @end@end</div>'
+            template: '<div>@if(condition)@Test({a: ds, b: 123}) @end@end</div>'
         },
         Test: {
             template: '<div>num: {{b}} | str: {{a}}</div>'
@@ -165,7 +165,7 @@ test('renders component inside condition', async t => {
 test('renders component inside loop', async t => {
     const templates = {
         Home: {
-            template: '<div>@for(item in items)@include("Test", {a: item, b: 123}) @end @end</div>'
+            template: '<div>@for(item in items)@Test({a: item, b: 123}) @end @end</div>'
         },
         Test: {
             template: '<div>num: {{b}} | str: {{a}}</div>'
@@ -179,7 +179,7 @@ test('renders component inside loop', async t => {
 test('renders component slot', async t => {
     const templates = {
         Home: {
-            template: '<div>@include("Test", {a: ds, b: 123}) Default @end</div>'
+            template: '<div>@Test({a: ds, b: 123}) Default @end</div>'
         },
         Test: {
             template: '<div>num: {{b}} | str: {{a}} | slot: @slot()</div>'
@@ -193,7 +193,7 @@ test('renders component slot', async t => {
 test('renders component named slot', async t => {
     const templates = {
         Home: {
-            template: '<div>@include("Test", {a: ds, b: 123}) Default @slot("one") ONE @end @slot("two") TWO @end @end</div>'
+            template: '<div>@Test({a: ds, b: 123}) Default @slot("one") ONE @end @slot("two") TWO @end @end</div>'
         },
         Test: {
             template: '<div>num: {{b}} | str: {{a}} | slot: @slot() | one: @slot("one") | two: @slot("two")</div>'
@@ -206,7 +206,7 @@ test('renders component named slot', async t => {
 test('renders nested component inside slot', async t => {
     const templates = {
         Home: {
-            template: '<div>@include("Test", {id: 1})<div>@include("Test", {id: 2})ONE@end</div>@end</div>'
+            template: '<div>@Test({id: 1})<div>@Test({id: 2})ONE@end</div>@end</div>'
         },
         Test: {
             template: '<div id="test" data-id="{{id}}">@slot()</div>'
@@ -219,41 +219,15 @@ test('renders nested component inside slot', async t => {
 test('renders nested component using include in component', async t => {
     const templates = {
         Home: {
-            template: '<div>@include("Test2", {id: 1})HOME@end</div>'
+            template: '<div>@Test2({id: 1})HOME@end</div>'
         },
         Test: {
             template: '<div id="test" data-id="{{id}}" data-id2="{{id2}}">@slot()</div>'
         },
         Test2: {
-            template: '<div>@include("Test", {id: 2, id2: id})TWO@end</div>'
+            template: '<div>@Test({id: 2, id2: id})TWO@end</div>'
         }
     }
 
     t.is(await render(templates, { condition: true, id: 1 }), '<!--include:Home--><div><!--include:Test2--><div><!--include:Test--><div id="test" data-id="2" data-id2="1">TWO</div></div></div>')
 });
-
-// import createEngine from '../src/render.js'; // Adjust the import path
-
-// async function render(templates, props) {
-//     const engine = createEngine({
-//         templates
-//     })
-
-//     return engine.render({ name: 'Home', props }).then(x => x.html)
-// }
-
-    // const template = '@if(condition) @for(item in items) <h1>{{item.value}}</h1> @end @else <h1>No items</h1> @end';
-
-    // const engine = createEngine({
-    //     templates: {
-    //         Home: { template }
-    //     }
-    // })
-
-    // async function render(props) {
-    //     return await engine.render({ name: 'Home', props }).then(res => res.html)
-    // }
-
-    // const res = await render({ condition: true, items: [{ value: 'One' }, { value: 'Two' }] })
-    // console.log(res)
-    //  '<!--include:Home--><h1>One</h1><h1>Two</h1>');
