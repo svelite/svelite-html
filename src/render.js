@@ -166,6 +166,7 @@ function getForTag(template, index) {
     const iterator = template.slice(iteratorStart, iteratorEnd);
     const [key, list] = iterator.split(' in ');
 
+    console.log(template.slice(iteratorEnd))
     const block = getBlock(template, iteratorEnd, ['@endfor'], ['@for', '@endfor'])
 
     if (block) {
@@ -405,12 +406,16 @@ function applyTag(template, props, tag, templates, head) {
             }
             return render(tag.result.else, props, templates, head).html
         } else if (tag.result.type == 'for') {
+            console.log('render for:', tag.result)
 
             const rendered = renderVariable(`{${tag.result.iterator}}`, props, true)
             const iterator = evaluate(rendered, props)
 
+            console.log({iterator})
+
             let res = ''
             for (let item of iterator) {
+                console.log(tag.result.block)
                 const result = render(tag.result.block, { ...props, [tag.result.item]: item }, templates, head)
                 res += result.html
                 // head += result.head
@@ -511,74 +516,9 @@ export default function createEngine({ templates }) {
             let result = render(templates[name]?.template ?? `template ${name} not found.`, props, templates, head)
 
             if(result.html.startsWith('<')) {
-                result.html = `\n<!--include:${name}-->` + result.html
+                result.html = `<!--include:${name}-->` + result.html
             }
             return {html: result.html, head: Object.keys(result.head).map(x => result.head[x]).join('') }
         }
     }
 }
-
-const engine = createEngine({
-    // templates: {
-    //     Home: {
-    //         template: '@include("Test", {name}) abc @endinclude'
-    //     },
-    //     Test: {
-    //         template: '<name>{name}</name><content>{content}</content>'
-    //     }
-    // }
-    templates: {
-        // "Home": {
-        //     template: `<div>@for (i in names) {i} @endfor</div>`
-        // }
-        'Select': {
-            template: `<select name="{{name}}" id="{{id}}" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">
-            @if(placeholder)<option selected value="{{ item.name }}" disabled> {{placeholder}}</option>@endif
-            {{content}}
-            </select>`,
-            script: 'console.log("initialized select", $el)'
-        },
-        'Option': {
-            template: `<option@if(selected) selected @endif>{{value}}</option>`
-        },
-        // 'Home': {
-        //     template: `
-        //     @head
-        //         <title>Head</title>
-        //     @endhead
-        //     @include('Select', {
-        //         name: 'name',
-        //         id: 'nameInput',
-        //         placeholder: 'انتخاب نام',
-        //     })
-        //         @for (n in names)
-        //             @include("Option", {value: n, selected: n === name})
-        //             @endinclude
-        //         @endfor
-        //     @endinclude
-        //     `,
-        //     script: 'console.log("initialized Home", $el)'
-
-        // }
-        Test: {
-            template: '<div>@slot("test")</div><h1>@slot()</h1>'
-        },
-        Home: {
-            // template: '@head<title>Title</title>@endhead<div>Hello {{name}}{{name2}}{{name}}</div>'
-            // template: `@include('Test', {a: 1})content@endinclude`
-            // template: `@props('title', 'actions', 'test') @if(test)test @endif`
-            // template: '<div>@slot("name")</div>'
-            template: `<h2>@include('Test')123default@slot("test")sadf@endslot@endinclude</h2>`
-        }
-    }
-})
-const {html, script, head} = await engine.render({ name: 'Home', props: { name: 'hi', names: ['hi', 'di'] }})
-console.log({html, script, head})
-
-// <div class="something">
-{/* <select name="name" id="nameInput" class="bg-white w-full p-4 shadow outline-none focus:shadow-lg">
-                <option selected value="{ item.name }" disabled> انتخاب نام </option>
-
-                <option value="__new__">نام جدید...</option>
-            </select>
-            <div></div> */}

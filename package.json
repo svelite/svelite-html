@@ -14,6 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "ava": "^6.1.2",
     "cookie-parser": "^1.4.6",
     "express": "^4.18.3",
     "mongodb": "^6.5.0",
@@ -22,10 +23,10 @@
   },
   "exports": {
     ".": {
-      "default": "./index.js"
+      "default": "./src/index.js"
     },
     "./db": {
-      "default": "./db.js"
+      "default": "./src/db.js"
     }
   }
 }

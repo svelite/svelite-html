@@ -8,26 +8,21 @@ export function renderVariable(template, props, stringify) {
 
     try {
         console.log('calling evaluate: ', value, props)
-        let res1 = evaluate(value, props)
+        let res = evaluate(value, props)
 
-        let res = res1;
         if (stringify) {
-            res = JSON.stringify(res1)
+            res = JSON.stringify(res)
         }
 
-        // template = template + res + template.slice(i + 1)
         return res
-
     } catch (err) {
-
-        console.log(err)
         console.log(err.message)
-
+        return ''
     }
-    return template
 }
 
 export function renderVariables(template, props, stringify) {
+    console.log('render variables: ', template)
     if(!template) return ''
 
     let pre = ''
@@ -97,6 +92,7 @@ export function renderVariables(template, props, stringify) {
                 pre = template.slice(0, index)
                 post = template.slice(i + 2)
 
+                console.log('calling renderVariable', {variable, props})
                 return pre + renderVariable(variable, props, stringify) + renderVariables(post, props, stringify)
             }
         }   
