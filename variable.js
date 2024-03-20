@@ -1,33 +1,13 @@
-function safeEval(code, context) {
-    const undefinedVariableRegex = /\b\w+\b(?![\w\s]*:)/g; // Matches undefined variables
-    const undefinedVariables = code.match(undefinedVariableRegex);
-    
-    if (undefinedVariables && undefinedVariables.length > 0) {
-        undefinedVariables.forEach(variable => {
-            if (typeof window[variable] === 'undefined' && typeof context[variable] === 'undefined') {
-                code = code.replace(new RegExp(`\\b${variable}\\b`, 'g'), 'undefined');
-            }
-        });
-    }
-
-    try {
-        return eval(code);
-    } catch (error) {
-        console.error("Error during evaluation:", error);
-        return undefined; // or any other default value you want to return
-    }
-}
-
 export function evaluate(code, context = {}) {
     const pre = Object.keys(context).map(key => `var ${key} = context["${key}"];`).join('')
-    return safeEval(pre + '\n' + code, context)        
+    return eval(pre + '\n' + code)        
 }
 
 export function renderVariable(template, props, stringify) {
     let value = template.trim()
 
     try {
-        console.log('calling evaluate: ', value)
+        console.log('calling evaluate: ', value, props)
         let res1 = evaluate(value, props)
 
         let res = res1;
@@ -40,6 +20,7 @@ export function renderVariable(template, props, stringify) {
 
     } catch (err) {
 
+        console.log(err)
         console.log(err.message)
 
     }

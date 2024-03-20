@@ -228,7 +228,7 @@ function getObject(template, index) {
             if(stack === 0) {
                 return {
                     start,
-                    end: i,
+                    end: i +1,
                     result: template.slice(start, i + 1)
                 }
             }
@@ -246,11 +246,12 @@ function getComponentTag(template, index) {
     console.log({props})
 
 
-    let content = getBlock(template, (props?.end ?? name.end) + 1, ['@endinclude'], ['@include', '@endinclude'])
+    let content = getBlock(template, (props?.end ?? name.end), ['@endinclude'], ['@include', '@endinclude'])
 
 
     function extractSections(input) {
-        const regex = /@section\('([^']+)'\)([\s\S]*?)@endsection/g;
+        console.log('extractSections', input)
+        const regex = /@slot\(['"]([^'"]+)['"]\)([\s\S]*?)@endslot/g;
         let match;
         let sections = {};
         let defaultContent = '';
@@ -258,7 +259,7 @@ function getComponentTag(template, index) {
         while ((match = regex.exec(input)) !== null) {
             const sectionName = match[1];
             const sectionContent = match[2].trim();
-            sections[sectionName] = sectionContent;
+            sections['slot_' + sectionName] = sectionContent;
         }
     
         // Extract content outside of sections
@@ -269,13 +270,13 @@ function getComponentTag(template, index) {
     
         // If there's content outside sections, add it to default
         if (defaultContent) {
-            sections.content = defaultContent;
+            sections.slot_default = defaultContent;
         }
     
         return sections;
     }
     
-    const slots = extractSections(content);
+    const slots = extractSections(content.result);
 
     
     // handle other slots
@@ -287,7 +288,7 @@ function getComponentTag(template, index) {
         slots
     }
 
-    console.log(content?.end, props?.end, name?.end, '@endinclude'.length)
+    console.log(result)
     return {
         start: index,
         end: (content?.end ?? props.end ?? name.end) + '@endinclude'.length,
@@ -308,19 +309,71 @@ function getHeadTag(template, index) {
         }
     }
 }
+
+function getPropsTag(template, i) {
+    const startIndex = template.indexOf('(', i) + 1
+    const endIndex = template.indexOf(')', i)
+
+    const result = {
+        type: 'props',
+        props: template
+            .slice(startIndex, endIndex)
+            .split(',')
+            .map(x => x.trim())
+            .map(x => x.slice(1, x.length - 1))
+    }
+    
+    return {
+        start: i,
+        end: endIndex + 1,
+        result
+
+    }
+}
+
+function getSlotTag(template, i) {
+    const startIndex = template.indexOf('(', i) + 1
+    const endIndex = template.indexOf(')', i)
+
+    const content = template.slice(startIndex, endIndex).trim();
+
+    let name = content ? content.slice(1, content.length - 1) : 'default';
+
+
+    const result = {
+        type: 'slot',
+        name
+    }
+    
+    return {
+        start: i,
+        end: endIndex + 1,
+        result
+
+    }
+}
+
 function findNextTag(template) {
     for (let i = 0; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
+            // also supports @elseif and @else
             return getIfTag(template, i)
         }
         if (template.slice(i).startsWith('@for')) {
             return getForTag(template, i)
         }
         if (template.slice(i).startsWith('@include')) {
+            // also supports @slot
             return getComponentTag(template, i)
         }
         if (template.slice(i).startsWith('@head')) {
             return getHeadTag(template, i)
+        }
+        if (template.slice(i).startsWith('@props')) {
+            return getPropsTag(template, i)
+        }
+        if (template.slice(i).startsWith('@slot')) {
+            return getSlotTag(template, i)
         }
     }
 }
@@ -369,7 +422,7 @@ function applyTag(template, props, tag, templates, head) {
             const template = templates[tag.result.name]?.template
             
             for(let slot in tag.result.slots) {
-                componentProps[slot] = render(tag.result.slots[i], props, templates, head).html;
+                componentProps[slot] = render(tag.result.slots[slot], props, templates, head).html;
             }
             
             let res = render(template, componentProps, templates, head).html;
@@ -383,6 +436,16 @@ function applyTag(template, props, tag, templates, head) {
             head[template] = render(tag.result.content, props, templates, '').html
 
             return ''
+        } else if(tag.result.type === 'props') {
+            for(let item of tag.result.props) {
+                props[item] = undefined
+            }
+            return ''
+        }
+        else if(tag.result.type === 'slot') {
+            const content = render(props['slot_' + tag.result.name], props, templates, head).html
+            console.log(content)
+            return content
         }
     }
 
@@ -404,6 +467,7 @@ function render(template, props, templates, head = {}) {
         return render(result.html, props, templates, head)
     }
 
+    console.log(result)
     return {
         html: result.trim(),
         head
@@ -490,11 +554,14 @@ const engine = createEngine({
 
         // }
         Test: {
-            template: 'Test'
+            template: '<div>@slot("test")</div><h1>@slot()</h1>'
         },
         Home: {
             // template: '@head<title>Title</title>@endhead<div>Hello {{name}}{{name2}}{{name}}</div>'
-            template: `@include('Test', {a: 1})content@endinclude`
+            // template: `@include('Test', {a: 1})content@endinclude`
+            // template: `@props('title', 'actions', 'test') @if(test)test @endif`
+            // template: '<div>@slot("name")</div>'
+            template: `<h2>@include('Test')123default@slot("test")sadf@endslot@endinclude</h2>`
         }
     }
 })
