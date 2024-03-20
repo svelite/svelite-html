@@ -7,6 +7,7 @@ export function renderVariable(template, props, stringify) {
     let value = template.trim()
 
     try {
+        console.log('calling evaluate: ', value)
         let res1 = evaluate(value, props)
 
         let res = res1;

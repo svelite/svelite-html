@@ -6,7 +6,12 @@ export default {
 				{
 					name: 'Test',
 					content: [
-						{name: 'Test'}
+						{
+							name: 'TestPage', 
+							content: [
+								{name: 'Leaf'}
+							]
+						}
 					]
 				}
 			]

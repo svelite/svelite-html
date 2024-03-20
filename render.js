@@ -202,11 +202,20 @@ function getComponentName(template, index) {
 }
 
 function getObject(template, index) {
+    console.log(template.slice(index))
     let stack = 0
     let start = index
 
     for(let i=index; i<template.length; i++) {
         const char = template[i]
+
+        if(stack === 0 && char === ')') {
+            return {
+                start: i,
+                end: i,
+                result: ''
+            }
+        }
 
         if(char === '{') {
             stack +=1
@@ -232,8 +241,11 @@ function getObject(template, index) {
 function getComponentTag(template, index) {
     // TODO: Implement
     let name = getComponentName(template, index + '@include'.length)
+    console.log({name})
 
     let props = getObject(template, name.end)
+    console.log({props})
+
 
     let content = getBlock(template, (props?.end ?? name.end) + 1, ['@endinclude'], ['@include', '@endinclude'])
 
@@ -244,6 +256,7 @@ function getComponentTag(template, index) {
         content: content?.result ?? '',
     }
 
+    console.log(content?.end, props?.end, name?.end, '@endinclude'.length)
     return {
         start: index,
         end: (content?.end ?? props.end ?? name.end) + '@endinclude'.length,
@@ -288,7 +301,9 @@ function applyTag(template, props, tag, templates, head) {
             let result; 
 
             try {
-                result = evaluate(renderVariable(`{${tag.result.condition}}`, props), props)
+                const variable = renderVariable(`{${tag.result.condition}}`, props)
+                console.log('calling evaluate', variable)
+                result = evaluate(variable, props)
             } catch(err) {
                 result = false;
             }
@@ -318,23 +333,20 @@ function applyTag(template, props, tag, templates, head) {
             }
             return res;
         } else if (tag.result.type === 'include') {
-            const template = templates[tag.result.name].template
+            const content = render(tag.result.content, props, templates, head).html;
+            
+            const componentProps = tag.result.props ? evaluate(`(${tag.result.props})`, props) : {};
 
-            const props2 = evaluate(`(${tag.result.props})`, props)
 
-            console.log('1', tag.result.content)
-            const rendered = render(tag.result.content, props, templates, head)
-            props2.content = rendered.html
-            // head += rendered.head
-            // console.log('2', template)
-            // const rendered2 = render(template, props2, templates, head)
-            // const res = rendered2.html
-            // head += rendered2.html
-            let res = props2.content
-            if(res.startsWith('<')) {
-                return `\n<!--include:${tag.result.name}-->` + res
+            const template = templates[tag.result.name]?.template
+            
+            let res = render(template, { content, ...componentProps}, templates, head).html;
+
+            if(res.startsWith('<') && !res.startsWith('<!--')) {
+                res = `<!--include:${tag.result.name}-->` + res
             }
-            return res
+            
+            return res;
         } else if(tag.result.type === 'head') {
             head[template] = render(tag.result.content, props, templates, '').html
 
