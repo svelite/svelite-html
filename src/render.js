@@ -17,14 +17,14 @@ function findNextElseIf(template, index) {
         if (template.slice(i).startsWith('@if')) {
             skips += 1
         }
-        if (template.slice(i).startsWith('@endif')) {
+        if (template.slice(i).startsWith('@end')) {
             skips -= 1
         }
         if (template.slice(i).startsWith('@elseif')) {
             const start = i + '@elseif'.length
             const condition = getCondition(template, start)
 
-            const block = getBlock(template, condition.end, ['@else', '@endif'], ['@if', '@endif'])
+            const block = getBlock(template, condition.end, ['@else', '@end'], ['@if'])
 
             const result = {
                 start,
@@ -47,13 +47,13 @@ function findElse(template, index) {
         if (template.slice(i).startsWith('@if')) {
             skips += 1
         }
-        if (template.slice(i).startsWith('@endif')) {
+        if (template.slice(i).startsWith('@end')) {
             skips -= 1
         }
         else if (template.slice(i).startsWith('@elseif')) {
         }
         else if (template.slice(i).startsWith('@else')) {
-            return getBlock(template, i + '@else'.length, ['@endif'], ['@if', '@endif'])
+            return getBlock(template, i + '@else'.length, ['@end'], ['@if'])
         }
     }
     return null
@@ -72,11 +72,14 @@ function getCondition(template, index) {
 }
 
 function getBlock(template, index, endtags, skipOn) {
+    let skips = ['@if', '@include', '@for', '@head', '@slot']
 
     let stack = 0;
     for (let i = index; i < template.length; i++) {
-        if (template.slice(i).startsWith(skipOn[0])) {
-            stack += 1;
+        for(let skip of skips) {
+            if (template.slice(i).startsWith(skip)) {
+                stack += 1;
+            }    
         }
 
         if (stack == 0) {
@@ -94,6 +97,7 @@ function getBlock(template, index, endtags, skipOn) {
                         result = ' ' + result
                     }
 
+                    console.log('result of getBlock: ', result)
                     return {
                         start,
                         end,
@@ -105,7 +109,7 @@ function getBlock(template, index, endtags, skipOn) {
         }
 
 
-        if (template.slice(i).startsWith(skipOn[1])) {
+        if (template.slice(i).startsWith('@end')) {
             stack -= 1;
         }
     }
@@ -118,7 +122,7 @@ function getIfTag(template, index) {
     const condition = getCondition(template, index)
 
     let lastIndex;
-    const block = getBlock(template, condition.end, ['@elseif', '@else', '@endif'], ['@if', '@endif'])
+    const block = getBlock(template, condition.end, ['@elseif', '@else', '@end'], ['@if', '@for'])
     if (block) {
         lastIndex = block.end
     }
@@ -151,7 +155,7 @@ function getIfTag(template, index) {
 
     return {
         start: index,
-        end: lastIndex + '@endif'.length,
+        end: lastIndex + '@end'.length,
         result
     }
 }
@@ -166,11 +170,10 @@ function getForTag(template, index) {
     const iterator = template.slice(iteratorStart, iteratorEnd);
     const [key, list] = iterator.split(' in ');
 
-    console.log(template.slice(iteratorEnd))
-    const block = getBlock(template, iteratorEnd, ['@endfor'], ['@for', '@endfor'])
+    const block = getBlock(template, iteratorEnd, ['@end'], ['@for'])
 
     if (block) {
-        end = block.end + '@endfor'.length
+        end = block.end + '@end'.length
     }
     const result = {
         type: 'for',
@@ -202,7 +205,6 @@ function getComponentName(template, index) {
 }
 
 function getObject(template, index) {
-    console.log(template.slice(index))
     let stack = 0
     let start = index
 
@@ -241,43 +243,78 @@ function getObject(template, index) {
 function getComponentTag(template, index) {
     // TODO: Implement
     let name = getComponentName(template, index + '@include'.length)
-    console.log({name})
 
     let props = getObject(template, name.end)
-    console.log({props})
 
 
-    let content = getBlock(template, (props?.end ?? name.end), ['@endinclude'], ['@include', '@endinclude'])
+    let content = getBlock(template, (props?.end ?? name.end), ['@end'], ['@include', '@slot'])
 
 
     function extractSections(input) {
-        console.log('extractSections', input)
-        const regex = /@slot\(['"]([^'"]+)['"]\)([\s\S]*?)@endslot/g;
-        let match;
-        let sections = {};
-        let defaultContent = '';
-    
-        while ((match = regex.exec(input)) !== null) {
-            const sectionName = match[1];
-            const sectionContent = match[2].trim();
-            sections['slot_' + sectionName] = sectionContent;
+        const sections = {}
+        let stack = 0
+        let key = 'slot_default'
+        sections[key] = ''
+        for(let i=0; i<input.length; i++) {
+            if(input.slice(i).startsWith('@slot')) {
+                const slot = getSlotTag(input, i);
+                key = 'slot_' + slot.result.name
+                sections[key] ??= ''
+                i = slot.end
+            } else {
+                let tags = ['@if', '@head', '@include', '@slot', '@for', '@elseif', '@else']
+
+                for(let tag of tags) {
+                    if(input.slice(i).startsWith(tag)) {
+                        stack += 1
+                    }
+                }
+
+                if(input.slice(i).startsWith('@end')) {
+                    stack -= 1
+                    
+                    if(key !== 'slot_default')
+                        i += 4
+
+                    if(stack == 0) {
+                        key = 'slot_default'
+                    }
+                }
+            }
+            
+            if(input[i]) {
+                sections[key] += input[i]
+            }
         }
+
+        return sections
+        // console.log('extractSections', input)
+        // const regex = /@slot\(['"]([^'"]+)['"]\)([\s\S]*?)@end/g;
+        // let match;
+        // let sections = {};
+        // let defaultContent = '';
     
-        // Extract content outside of sections
-        const remainingContent = input.replace(regex, '').trim();
-        if (remainingContent) {
-            defaultContent = remainingContent;
-        }
+        // while ((match = regex.exec(input)) !== null) {
+        //     const sectionName = match[1];
+        //     const sectionContent = match[2].trim();
+        //     sections['slot_' + sectionName] = sectionContent;
+        // }
     
-        // If there's content outside sections, add it to default
-        if (defaultContent) {
-            sections.slot_default = defaultContent;
-        }
+        // // Extract content outside of sections
+        // const remainingContent = input.replace(regex, '').trim();
+        // if (remainingContent) {
+        //     defaultContent = remainingContent;
+        // }
     
-        return sections;
+        // // If there's content outside sections, add it to default
+        // if (defaultContent) {
+        //     sections.slot_default = defaultContent;
+        // }
+    
+        // return sections;
     }
     
-    const slots = extractSections(content.result);
+    const slots = extractSections(content?.result ?? '');
 
     
     // handle other slots
@@ -289,21 +326,20 @@ function getComponentTag(template, index) {
         slots
     }
 
-    console.log(result)
     return {
         start: index,
-        end: (content?.end ?? props.end ?? name.end) + '@endinclude'.length,
+        end: (content?.end ?? props.end ?? name.end) + '@end'.length,
         result
     }
 }
 
 function getHeadTag(template, index) {
 
-    const block = getBlock(template, index + 'head'.length, ['@endhead'], [])
+    const block = getBlock(template, index + 'head'.length, ['@end'], [])
 
     return {
         start: index,
-        end: block.end + '@endhead'.length,
+        end: block.end + '@end'.length,
         result: {
             type: 'head',
             content: block.result
@@ -387,7 +423,6 @@ function applyTag(template, props, tag, templates, head) {
 
             try {
                 const variable = renderVariable(`{${tag.result.condition}}`, props)
-                console.log('calling evaluate', variable)
                 result = evaluate(variable, props)
             } catch(err) {
                 result = false;
@@ -406,16 +441,12 @@ function applyTag(template, props, tag, templates, head) {
             }
             return render(tag.result.else, props, templates, head).html
         } else if (tag.result.type == 'for') {
-            console.log('render for:', tag.result)
 
             const rendered = renderVariable(`{${tag.result.iterator}}`, props, true)
             const iterator = evaluate(rendered, props)
 
-            console.log({iterator})
-
             let res = ''
             for (let item of iterator) {
-                console.log(tag.result.block)
                 const result = render(tag.result.block, { ...props, [tag.result.item]: item }, templates, head)
                 res += result.html
                 // head += result.head
@@ -449,7 +480,6 @@ function applyTag(template, props, tag, templates, head) {
         }
         else if(tag.result.type === 'slot') {
             const content = render(props['slot_' + tag.result.name], props, templates, head).html
-            console.log(content)
             return content
         }
     }
@@ -472,7 +502,6 @@ function render(template, props, templates, head = {}) {
         return render(result.html, props, templates, head)
     }
 
-    console.log(result)
     return {
         html: result.trim(),
         head

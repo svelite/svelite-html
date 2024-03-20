@@ -7,7 +7,6 @@ export function renderVariable(template, props, stringify) {
     let value = template.trim()
 
     try {
-        console.log('calling evaluate: ', value, props)
         let res = evaluate(value, props)
 
         if (stringify) {
@@ -22,7 +21,6 @@ export function renderVariable(template, props, stringify) {
 }
 
 export function renderVariables(template, props, stringify) {
-    console.log('render variables: ', template)
     if(!template) return ''
 
     let pre = ''
@@ -55,28 +53,20 @@ export function renderVariables(template, props, stringify) {
         }
         
         if(template.slice(i).startsWith('@for')) {
-            stack.push('@endfor')
+            stack.push('tag')
         }
-        if(stack.at(-1) === '@endfor' && template.slice(i).startsWith('@endfor')) {
+        if(stack.at(-1) === 'tag' && template.slice(i).startsWith('@end')) {
             stack.pop()
         }
+
         if(template.slice(i).startsWith('@if')) {
-            stack.push('@endif')
-        }
-        if(stack.at(-1) === '@endif' && template.slice(i).startsWith('@endif')) {
-            stack.pop()
+            stack.push('tag')
         }
         if(template.slice(i).startsWith('@include')) {
-            stack.push('@endinclude')
-        }
-        if(stack.at(-1) === '@endinclude' && template.slice(i).startsWith('@endinclude')) {
-            stack.pop()
+            stack.push('tag')
         }
         if(template.slice(i).startsWith('@head')) {
-            stack.push('@endhead')
-        }
-        if(stack.at(-1) === '@endhead' && template.slice(i).startsWith('@endhead')) {
-            stack.pop()
+            stack.push('tag')
         }
         
         if(template[i] === '{' && template[i+1] === '{') {
@@ -92,7 +82,6 @@ export function renderVariables(template, props, stringify) {
                 pre = template.slice(0, index)
                 post = template.slice(i + 2)
 
-                console.log('calling renderVariable', {variable, props})
                 return pre + renderVariable(variable, props, stringify) + renderVariables(post, props, stringify)
             }
         }   
