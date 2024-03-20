@@ -1,6 +1,26 @@
+function safeEval(code, context) {
+    const undefinedVariableRegex = /\b\w+\b(?![\w\s]*:)/g; // Matches undefined variables
+    const undefinedVariables = code.match(undefinedVariableRegex);
+    
+    if (undefinedVariables && undefinedVariables.length > 0) {
+        undefinedVariables.forEach(variable => {
+            if (typeof window[variable] === 'undefined' && typeof context[variable] === 'undefined') {
+                code = code.replace(new RegExp(`\\b${variable}\\b`, 'g'), 'undefined');
+            }
+        });
+    }
+
+    try {
+        return eval(code);
+    } catch (error) {
+        console.error("Error during evaluation:", error);
+        return undefined; // or any other default value you want to return
+    }
+}
+
 export function evaluate(code, context = {}) {
     const pre = Object.keys(context).map(key => `var ${key} = context["${key}"];`).join('')
-    return eval(pre + '\n' + code)        
+    return safeEval(pre + '\n' + code, context)        
 }
 
 export function renderVariable(template, props, stringify) {
@@ -27,7 +47,6 @@ export function renderVariable(template, props, stringify) {
 }
 
 export function renderVariables(template, props, stringify) {
-    console.log({template, props})
     if(!template) return ''
 
     let pre = ''
@@ -97,13 +116,10 @@ export function renderVariables(template, props, stringify) {
                 pre = template.slice(0, index)
                 post = template.slice(i + 2)
 
-                console.log({index, i, template})
-
-                console.log({pre, center: {variable, props}, end: {post, props}})
                 return pre + renderVariable(variable, props, stringify) + renderVariables(post, props, stringify)
             }
         }   
     }
-    console.log('return template: ', template)
+    
     return template;
 }

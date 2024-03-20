@@ -1,4 +1,3 @@
-import { getProps } from "./props.js";
 import { evaluate, renderVariable, renderVariables } from "./variable.js";
 
 
@@ -249,11 +248,43 @@ function getComponentTag(template, index) {
 
     let content = getBlock(template, (props?.end ?? name.end) + 1, ['@endinclude'], ['@include', '@endinclude'])
 
+
+    function extractSections(input) {
+        const regex = /@section\('([^']+)'\)([\s\S]*?)@endsection/g;
+        let match;
+        let sections = {};
+        let defaultContent = '';
+    
+        while ((match = regex.exec(input)) !== null) {
+            const sectionName = match[1];
+            const sectionContent = match[2].trim();
+            sections[sectionName] = sectionContent;
+        }
+    
+        // Extract content outside of sections
+        const remainingContent = input.replace(regex, '').trim();
+        if (remainingContent) {
+            defaultContent = remainingContent;
+        }
+    
+        // If there's content outside sections, add it to default
+        if (defaultContent) {
+            sections.content = defaultContent;
+        }
+    
+        return sections;
+    }
+    
+    const slots = extractSections(content);
+
+    
+    // handle other slots
+
     const result = {
         type: 'include',
         name: name.result,
         props: props?.result ?? '{}',
-        content: content?.result ?? '',
+        slots
     }
 
     console.log(content?.end, props?.end, name?.end, '@endinclude'.length)
@@ -333,14 +364,15 @@ function applyTag(template, props, tag, templates, head) {
             }
             return res;
         } else if (tag.result.type === 'include') {
-            const content = render(tag.result.content, props, templates, head).html;
-            
             const componentProps = tag.result.props ? evaluate(`(${tag.result.props})`, props) : {};
-
 
             const template = templates[tag.result.name]?.template
             
-            let res = render(template, { content, ...componentProps}, templates, head).html;
+            for(let slot in tag.result.slots) {
+                componentProps[slot] = render(tag.result.slots[i], props, templates, head).html;
+            }
+            
+            let res = render(template, componentProps, templates, head).html;
 
             if(res.startsWith('<') && !res.startsWith('<!--')) {
                 res = `<!--include:${tag.result.name}-->` + res
