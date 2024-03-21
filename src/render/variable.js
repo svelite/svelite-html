@@ -1,7 +1,4 @@
-export function evaluate(code, context = {}) {
-    const pre = Object.keys(context).map(key => `var ${key} = context["${key}"];`).join('')
-    return eval(pre + '\n' + code)        
-}
+import { evaluate } from "../utils.js"
 
 export function renderVariable(template, props, stringify) {
     let value = template.trim()

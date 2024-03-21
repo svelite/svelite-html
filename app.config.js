@@ -1,15 +1,15 @@
 export default {
 	pages: [
 		{
-			slug: '/test', 
+			slug: '/test',
 			content: [
 				{
 					name: 'Test',
 					content: [
 						{
-							name: 'TestPage', 
+							name: 'TestPage',
 							content: [
-								{name: 'Leaf'}
+								{ name: 'Leaf' }
 							]
 						}
 					]
@@ -18,9 +18,9 @@ export default {
 		}
 	],
 	routes: {
-		api: (req, res) => res.json({hello: false}),
+		api: (req, res) => res.json({ hello: false }),
 		test: {
-			hi: (req, res) => res.json({test: 'hi'})
+			hi: (req, res) => res.json({ test: 'hi2' })
 		}
 	}
 }

@@ -1,4 +1,5 @@
-import { evaluate, renderVariable, renderVariables } from "./variable.js";
+import { evaluate } from "../utils.js";
+import { renderVariable, renderVariables } from "./variable.js";
 
 
 function findMatchingPair(template, index, char) {

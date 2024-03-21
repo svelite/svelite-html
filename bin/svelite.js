@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 import path from 'path'
 import { createApp } from "../src/index.js"
 import { mkdir, rm, copyFile, cp, writeFile } from 'fs/promises'
@@ -12,12 +13,12 @@ if (process.argv.includes('build')) {
         await mkdir('.vercel/output/functions/fn.func', { recursive: true });
 
         // Copy files and directories
-        await cp('public', '.vercel/output/static', {recursive: true});
-        await cp('components', '.vercel/output/functions/fn.func/components', {recursive: true});
+        await cp('public', '.vercel/output/static', { recursive: true });
+        await cp('components', '.vercel/output/functions/fn.func/components', { recursive: true });
         await copyFile('package.json', '.vercel/output/functions/fn.func/package.json');
         await copyFile('package-lock.json', '.vercel/output/functions/fn.func/package-lock.json');
         await copyFile('app.config.js', '.vercel/output/functions/fn.func/app.config.js');
-        await cp('node_modules', '.vercel/output/functions/fn.func/node_modules', {recursive: true});
+        await cp('node_modules', '.vercel/output/functions/fn.func/node_modules', { recursive: true });
 
         // Write config.json
         await writeFile('.vercel/output/config.json', JSON.stringify({
@@ -55,7 +56,7 @@ if (process.argv.includes('build')) {
     });
 
 } else {
-    const config = await import(path.resolve('./app.config.js')).then(res => res.default)
-
-    createApp(config).start(process.env.PORT ?? 3000)
+    createApp(
+        path.resolve('./app.config.js')
+    ).start(3000)
 }
