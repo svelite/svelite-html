@@ -382,6 +382,13 @@ function findNextTag(template, tags) {
         if (template.slice(i).startsWith('@slot')) {
             return getSlotTag(template, i, tags)
         }
+        // if (template.slice(i).startsWith('@{')) {
+        //     const startIndex = template.indexOf('{', i)
+        //     const endIndex = template.indexOf('}', i)
+        //     const str = template.slice(startIndex, endIndex)
+        //     console.log("DYNAMIC: ", str)
+
+        // }
 
         for (let tag of tags) {
             if (template.slice(i).startsWith(tag)) {

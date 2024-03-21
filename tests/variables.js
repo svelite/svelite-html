@@ -231,3 +231,22 @@ test('renders nested component using include in component', async t => {
 
     t.is(await render(templates, { condition: true, id: 1 }), '<!--include:Home--><div><!--include:Test2--><div><!--include:Test--><div id="test" data-id="2" data-id2="1">TWO</div></div></div>')
 });
+
+test.skip('renders dynamic component', async t => {
+    const templates = {
+        Home: {
+            template: '<div>@for(item in items) @{item.name}({value: item.value}) @end</div>'
+        },
+        One: {
+            template: '<div>ONE {{value}}</div>'
+        },
+        Two: {
+            template: '<div>TWO {{value}}</div>'
+        },
+        Three: {
+            template: '<div>THREE {{value}}</div>'
+        }
+    }
+
+    t.is(await render(templates, { items: [{name: 'One', value: 'yak'}] }), '<!--include:Home--><div><!--include:One--><div>ONE yak</div></div>')
+});
