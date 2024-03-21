@@ -1,7 +1,7 @@
 import express from 'express'
 import cookieParser from 'cookie-parser'
 import path from 'path'
-import { readFile, readdir } from 'fs/promises'
+import { readFile, readdir, stat } from 'fs/promises'
 import postcss from 'postcss'
 import tailwindcss from 'tailwindcss'
 import createEngine from './render.js'
@@ -24,8 +24,8 @@ function normalizeConfig(config) {
     if (typeof config.config.tailwindcss === 'undefined') {
         config.config.tailwindcss = true
     }
-    if (!config.config.components) {
-        config.config.components = './components'
+    if (!config.config.views) {
+        config.config.views = './views'
     }
     if (!config.config.layouts) {
         config.config.layouts = './layouts'
@@ -75,17 +75,33 @@ function parse(template) {
 async function renderPage(page, loadParams, config) {
 
     const templates = {}
-    const components = await readdir(config.config.components)
-    let script = `const components = {};`
+    let script = `const views = {};`
 
-    for (let component of components) {
-        const content = await readFile(path.join(config.config.components, component), 'utf-8')
-        const name = component.replace('.html', '')
-        templates[name] = parse(content)
-        script += `components["${name}"] = ($el) => {${templates[name].script ?? `function ${name}($el) {}`}; ${name}?.($el)};\n`
+    async function initializeViews(folder, prefix) {
+        const views = await readdir(folder)
+        for (let view of views) {
+            if(view.endsWith('.html')) {
+                const content = await readFile(path.join(folder, view), 'utf-8')
+                let name;
 
+                if(prefix.split('.').at(-1) === view.replace('.html', '')) {
+                    name = prefix
+                } else {
+                    name = [prefix, view.replace('.html', '')].filter(Boolean).join('.')
+                }
+
+                templates[name] = parse(content)
+                script += `views["${name}"] = ($el) => {${templates[name].script ?? ``}};\n`
+            } else if((await stat(path.join(folder, view))).isDirectory) {
+                initializeViews(path.join(folder, view), view)
+            }
+        }
     }
+    
 
+    await initializeViews(config.config.views, '')
+
+    console.log({templates})
     const engine = createEngine({ templates })
 
 

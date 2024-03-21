@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import path from 'path'
-import { createApp } from "../index.js"
+import { createApp } from "../src/index.js"
 import { mkdir, rm, copyFile, cp, writeFile } from 'fs/promises'
 import { exec } from 'child_process'
 

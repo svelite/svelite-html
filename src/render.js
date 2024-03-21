@@ -455,7 +455,7 @@ function applyTag(template, props, tag, templates, head, tags) {
             return ''
         }
         else if (tag.result.type === 'slot') {
-            const content = render(props['slot_' + tag.result.name], props, templates, head, tags).html
+            const content = render(props['slot_' + tag.result.name] ?? '', props, templates, head, tags).html
             return content
         }
     }
@@ -520,18 +520,14 @@ export default function createEngine({ templates }) {
 
             const tags = ['@if', '@for', '@slot', '@head']
 
-            function addTemplateTags(name, template) {
+            function addTemplateTags(name) {
                 tags.push(name)
-                if(template.sub) {
-                    for(let subItem in template.sub) {
-                        addTemplateTags(name + '.' + subItem, subItem)
-                    }
-                }
             } 
             
             for(let key in templates) {
-                addTemplateTags('@' + key, templates[key])                
+                addTemplateTags('@' + key)                
             }
+            console.log(tags)
             
             let result = render(templates[name]?.template ?? `template ${name} not found.`, props, templates, head, tags)
 
