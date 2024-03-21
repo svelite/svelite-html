@@ -392,7 +392,7 @@ function findNextTag(template, tags) {
         // }
 
         for (let tag of tags) {
-            if (template.slice(i).startsWith(tag)) {
+            if (template.slice(i).startsWith(tag + '(') || template.slice(i).startsWith(tag + ' (')) {
                 return getComponentTag(template, i, tags)
             }
         }

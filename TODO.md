@@ -17,3 +17,5 @@ also should update components path...
 
 ## api should support get Method even if there is a page with same url (accept: application/json)
 
+
+## build app to single js file (no node-modules)

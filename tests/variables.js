@@ -1,6 +1,6 @@
 // // test.ava.js
 import test from 'ava';
-import createEngine from '../src/render.js'; // Adjust the import path
+import createEngine from '../src/render/render.js'; // Adjust the import path
 
 async function render(templates, props) {
     const engine = createEngine({
