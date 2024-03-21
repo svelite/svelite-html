@@ -37,7 +37,7 @@ function getScript(templates) {
                 const value = child.nodeValue.trim()
                 if(value.startsWith('include:')) {
                     const name = value.split(':')[1]
-                    components[name](child.nextElementSibling)
+                    views[name](child.nextElementSibling)
                 }
             } else if(child.nodeType === Node.ELEMENT_NODE) {
                 initialize(child)
@@ -55,6 +55,7 @@ function getScript(templates) {
 async function initializeViews(folder, prefix, templates = {}) {
     console.log('initializeViews', folder)
     const views = await readdir(folder)
+    console.log({views, templates})
     for (let view of views) {
         if (view.endsWith('.html')) {
             const content = await readFile(path.join(folder, view), 'utf-8')
@@ -66,9 +67,10 @@ async function initializeViews(folder, prefix, templates = {}) {
                 name = [prefix, view.replace('.html', '')].filter(Boolean).join('.')
             }
 
+            console.log('parse: ', name, content)
             templates[name] = parseTemplate(content)
         } else if ((await stat(path.resolve(path.join(folder, view)))).isDirectory) {
-            initializeViews(path.resolve(path.join(folder, view)), view, templates)
+            templates = {...templates, ...(await initializeViews(path.resolve(path.join(folder, view)), view, templates))}
         }
     }
     return templates
