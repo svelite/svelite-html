@@ -72,13 +72,12 @@ function getCondition(template, index) {
 }
 
 function getBlock(template, index, endtags, tags) {
-    // let skips = ['@if', '@include', '@for', '@head', '@slot']
-
     let stack = 0;
-    
+
     for (let i = index; i < template.length; i++) {
         for (let tag of tags) {
             if (template.slice(i).startsWith(tag)) {
+                i += 1
                 stack += 1;
             }
         }
@@ -121,15 +120,15 @@ function getBlock(template, index, endtags, tags) {
 function getIfTag(template, index, tags) {
     const condition = getCondition(template, index)
 
-    let lastIndex;
-    let customTags = tags.filter(x => x!== '@elseif' && x!== '@else')
-    const block = getBlock(template, condition.end, ['@elseif', '@else', '@end'], tags)
+    let lastIndex = index;
+
+    const block = getBlock(template, condition.end, ['@elseif', '@end', '@else'], tags)
     if (block) {
         lastIndex = block.end
     }
 
     let elseifs = []
-    let elseif = findNextElseIf(template, condition.end, customTags)
+    let elseif = findNextElseIf(template, condition.end, tags)
 
     if (elseif) {
         lastIndex = elseif.end
@@ -138,10 +137,10 @@ function getIfTag(template, index, tags) {
     while (elseif) {
         elseifs.push(elseif.result)
         lastIndex = elseif.end
-        elseif = findNextElseIf(template, lastIndex, customTags)
+        elseif = findNextElseIf(template, lastIndex, tags)
     }
 
-    const elseBlock = findElse(template, lastIndex, customTags)
+    const elseBlock = findElse(template, lastIndex, tags)
     if (elseBlock) {
         lastIndex = elseBlock.end
     }
@@ -154,6 +153,7 @@ function getIfTag(template, index, tags) {
         else: elseBlock ? elseBlock.result : ''
     }
 
+    console.log('condition: ', result)
     return {
         start: index,
         end: lastIndex + '@end'.length,
@@ -392,15 +392,16 @@ function findNextTag(template, tags) {
 }
 
 function applyTag(template, props, tag, templates, head, tags) {
+    console.log('applyTag', tag)
 
     function getContent() {
         if (tag.result.type == 'if') {
             let result;
 
             try {
-                const variable = renderVariable(`{${tag.result.condition}}`, props)
-                result = evaluate(variable, props)
+                result = renderVariable(`{${tag.result.condition}}`, props)
             } catch (err) {
+                console.log(err.message)
                 result = false;
             }
 
@@ -522,13 +523,12 @@ export default function createEngine({ templates }) {
 
             function addTemplateTags(name) {
                 tags.push(name)
-            } 
-            
-            for(let key in templates) {
-                addTemplateTags('@' + key)                
             }
-            console.log(tags)
-            
+
+            for (let key in templates) {
+                addTemplateTags('@' + key)
+            }
+
             let result = render(templates[name]?.template ?? `template ${name} not found.`, props, templates, head, tags)
 
             if (result.html.startsWith('<')) {
@@ -538,3 +538,16 @@ export default function createEngine({ templates }) {
         }
     }
 }
+
+console.log(getBlock(`<div class="flex items-center justify-between">
+    @if(title)
+    <div>
+        @Page.Title()
+            {{title}}
+        @end
+    </div>
+    @end
+    <div>
+        @slot()
+    </div>
+</div>`, 61, ['@elseif', '@end', '@else'], ['@if', '@for', '@slot', '@head', '@AdminLayout', '@Button', '@Card', '@Dashboard', '@Form', '@Icon', '@Modal', '@Page.Header', '@Page', '@Page.Title', '@Sidebar.Item', '@Sidebar']))
