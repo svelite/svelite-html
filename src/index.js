@@ -1,4 +1,5 @@
-import express from 'express'
+import { createServer as createViteServer } from 'vite'
+import express, { Router } from 'express'
 import cookieParser from 'cookie-parser'
 import path from 'path'
 import { readFile, readdir, stat } from 'fs/promises'
@@ -7,7 +8,7 @@ import tailwindcss from 'tailwindcss'
 import createEngine from './render.js'
 
 async function buildcss(config) {
-    
+
     return postcss([
         tailwindcss(config)
     ]).process(`@tailwind base;
@@ -27,9 +28,6 @@ function normalizeConfig(config) {
     if (!config.config.views) {
         config.config.views = './views'
     }
-    if (!config.config.layouts) {
-        config.config.layouts = './layouts'
-    }
     if (!config.config.static) {
         config.config.static = './public'
     }
@@ -41,36 +39,9 @@ function normalizeConfig(config) {
     if (!config.ctx) {
         config.ctx = {}
     }
+    return config
 }
 
-function ctxMiddleware(ctx) {
-    return (req, res, next) => {
-        for (let key in ctx) {
-            req[key] = ctx[key]
-        }
-        return next()
-    }
-}
-
-function parse(template) {
-    const serverRegex = /<script server>([\s\S]*?)<\/script>/;
-    const clientRegex = /<script>([\s\S]*?)<\/script>/;
-
-    const serverScriptMatch = template.match(serverRegex);
-    const clientScriptMatch = template.match(clientRegex);
-
-    const serverScript = serverScriptMatch ? serverScriptMatch[1].trim() : null;
-    const clientScript = clientScriptMatch ? clientScriptMatch[1].trim() : null;
-
-    const load = eval('(' + serverScript + ')')
-
-
-    return {
-        template: template.replace(serverRegex, '').replace(clientRegex, ''),
-        load,
-        script: clientScript
-    }
-}
 
 async function renderPage(page, loadParams, config) {
 
@@ -80,11 +51,11 @@ async function renderPage(page, loadParams, config) {
     async function initializeViews(folder, prefix) {
         const views = await readdir(folder)
         for (let view of views) {
-            if(view.endsWith('.html')) {
+            if (view.endsWith('.html')) {
                 const content = await readFile(path.join(folder, view), 'utf-8')
                 let name;
 
-                if(prefix.split('.').at(-1) === view.replace('.html', '')) {
+                if (prefix.split('.').at(-1) === view.replace('.html', '')) {
                     name = prefix
                 } else {
                     name = [prefix, view.replace('.html', '')].filter(Boolean).join('.')
@@ -92,16 +63,14 @@ async function renderPage(page, loadParams, config) {
 
                 templates[name] = parse(content)
                 script += `views["${name}"] = ($el) => {${templates[name].script ?? ``}};\n`
-            } else if((await stat(path.join(folder, view))).isDirectory) {
+            } else if ((await stat(path.join(folder, view))).isDirectory) {
                 initializeViews(path.join(folder, view), view)
             }
         }
     }
-    
 
     await initializeViews(config.config.views, '')
 
-    console.log({templates})
     const engine = createEngine({ templates })
 
 
@@ -156,13 +125,178 @@ async function renderPage(page, loadParams, config) {
 
         res += response.html
         head += response.head
-        
     }
 
     const resp = { html: res, script, head }
 
     return resp
 }
+
+function getLoadParams(req) {
+    const baseUrl = new URL(req.protocol + '://' + req.headers.host + req.url).origin
+    const params = req.params
+    const query = req.query
+    const url = req.url
+    const cookies = req.cookies
+
+    function api(path) {
+        return {
+            async post(data, headers = {}) {
+                return fetch(baseUrl + path, {
+                    method: 'POST', headers: {
+                        'Content-Type': 'application/json',
+                        ...headers
+                    }, body: JSON.stringify(data)
+                }).then(res => res.json())
+            }
+        }
+    }
+
+    return {
+        baseUrl,
+        params,
+        query,
+        url,
+        cookies,
+        api
+    }
+}
+
+function pageHandler(page) {
+    return async (req, res) => {
+        const { head, html, script } = await renderPage(page, getLoadParams(req), req.config)
+
+        const response = template
+            .replace('<!--body-->', html)
+            .replace('<!--script-->', `<script>${script}</script>`)
+            .replace('<!--head-->', head)
+
+        res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
+        return res.end(response)
+    }
+}
+
+function staticFilesMiddleware(staticConfig) {
+    const router = Router()
+    if (staticConfig) {
+        if (typeof staticConfig === 'object') {
+
+            if (Array.isArray(staticConfig)) {
+                for (let path of staticConfig) {
+                    router.get('/*', express.static(path))
+                }
+            } else {
+                for (let key in staticConfig)
+                    router.get(key + '*', express.static(staticConfig[key]))
+            }
+        } else {
+            router.get('/*', express.static(staticConfig))
+        }
+    }
+
+    return router
+}
+
+function apiRoutesMiddleware(routes) {
+    const router = Router()
+
+    function registerRoute(slug, route) {
+        if (typeof route === 'function') {
+            router.post(slug, async (req, res) => {
+                return route(req, res)
+            })
+        } else if (typeof route === 'object') {
+            for (let key in route) {
+                registerRoute(slug + key + '/', route[key])
+            }
+        }
+    }
+    registerRoute('/', routes)
+    return router
+}
+
+function pagesMiddleware(pages) {
+    const router = Router()
+
+    for (let page of pages) {
+        router.get(page.slug, pageHandler(page))
+    }
+
+    return router
+}
+
+function routesMiddleware() {
+    return async (req, res, next) => {
+
+        const router = new Router()
+
+        router.use(staticFilesMiddleware(req.config.config.static))
+
+        router.use(apiRoutesMiddleware(req.config.routes))
+        router.use(pagesMiddleware(req.config.pages))
+
+        return router(req, res, next)
+    }
+}
+
+export function createApp(config) {
+
+    const app = express()
+
+    app.start = async (port) => {
+        const vite = await createViteServer({
+            appType: 'custom',
+            server: {
+                middlewareMode: true,
+                fs: {
+                    allow: [],
+                }
+            },
+            publicDir: false
+        })
+
+        app.use(vite.middlewares)
+        app.use(cookieParser())
+        app.use(express.json())
+        app.use(express.urlencoded({ extended: true }))
+
+        app.use('/', async (req, res, next) => {
+            ({ default: config } = await vite.ssrLoadModule('./app.config.js'))
+            req.config = normalizeConfig(config)
+
+            next()
+        })
+
+        app.use(routesMiddleware())
+
+        const {PORT = port} = process.env
+        app.listen(PORT, () => console.log('server started on localhost:' + PORT))
+    }
+
+    return app
+}
+
+function parse(template) {
+    const serverRegex = /<script server>([\s\S]*?)<\/script>/;
+    const clientRegex = /<script>([\s\S]*?)<\/script>/;
+
+    const serverScriptMatch = template.match(serverRegex);
+    const clientScriptMatch = template.match(clientRegex);
+
+    const serverScript = serverScriptMatch ? serverScriptMatch[1].trim() : null;
+    const clientScript = clientScriptMatch ? clientScriptMatch[1].trim() : null;
+
+    const load = eval('(' + serverScript + ')')
+
+
+    return {
+        template: template.replace(serverRegex, '').replace(clientRegex, ''),
+        load,
+        script: clientScript
+    }
+}
+
+
 
 const template = `<!DOCTYPE html>
 <html lang="en">
@@ -176,120 +310,3 @@ const template = `<!DOCTYPE html>
     <!--script-->
 </body>
 </html>`
-
-const script = `
-window.svelite = {
-	
-}
-
-window.onMount = (cb) => {
-    document.addEventListener('DOMContentLoaded', (ev) => {
-        cb({api: svelite.api}) /** add more */
-    })
-}
-
-window.$info = () => {
-    return {el: '123', props: {todo: '123'}}
-}
-`
-
-function pagesMiddleware(pages, config) {
-    const router = express.Router()
-
-    for (let page of pages) {
-        registerPage(page, config, router)
-    }
-
-    return router
-}
-
-
-function registerPage(page, config, router) {
-    router.get(page.slug, async (req, res) => {
-        console.log('request page: ', req.url)
-
-        const baseUrl = new URL(req.protocol + '://' + req.headers.host + req.url).origin
-        const params = req.params
-        const query = req.query
-        const url = req.url
-        const cookies = req.cookies
-
-        function api(path) {
-            return {
-                async post(data, headers = {}) {
-                    return fetch(baseUrl + path, {
-                        method: 'POST', headers: {
-                            'Content-Type': 'application/json',
-                            ...headers
-                        }, body: JSON.stringify(data)
-                    }).then(res => res.json())
-                }
-            }
-        }
-
-
-        const { head, html, script } = await renderPage(page, { url, params, query, cookies, baseUrl, api }, config)
-
-        const response = template
-            .replace('<!--body-->', html)
-            .replace('<!--script-->', `<script>${script}</script>`)
-            .replace('<!--head-->', head)
-
-        res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
-        return res.end(response)
-    })
-}
-
-function routesMiddleware(routes) {
-    return async (req, res, next) => {
-        const slugs = req.url.split('?')[0].split('/').slice(1)
-
-
-        if (req.method === 'POST') {
-            // find route
-            const route = slugs.reduce((prev, curr) => {
-                if (curr === '') return prev['index']
-                return prev[curr]
-            }, routes)
-
-            if (typeof route === 'function')
-                return route(req, res)
-        }
-
-        return next()
-    }
-}
-
-export function createApp(config) {
-    normalizeConfig(config)
-
-    const app = express()
-
-    if(config.config.static) {
-        app.use(express.static(config.config.static))
-    }
-    app.use(cookieParser())
-    app.use(express.json())
-    app.use(express.urlencoded({ extended: true }))
-    app.use(ctxMiddleware(config.ctx))
-
-    app.use(pagesMiddleware(config.pages, config, app))
-
-    app.use(routesMiddleware(config.routes))
-
-    for (let middleware of config.middlewares) {
-        app.use(middleware)
-    }
-
-    app.use((req, res) => {
-        res.status(404).end('404 Not found')
-    })
-
-    const listen = (port) => {
-        const { PORT = port } = process.env
-        return app.listen(port, () => console.log('Listening on http://localhost:' + port))
-    }
-
-    app.start = listen;
-    return app
-}

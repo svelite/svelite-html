@@ -1,7 +1,7 @@
 export default {
 	pages: [
 		{
-			slug: '/', 
+			slug: '/test', 
 			content: [
 				{
 					name: 'Test',
@@ -16,5 +16,11 @@ export default {
 				}
 			]
 		}
-	]
+	],
+	routes: {
+		api: (req, res) => res.json({hello: false}),
+		test: {
+			hi: (req, res) => res.json({test: 'hi'})
+		}
+	}
 }
