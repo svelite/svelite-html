@@ -17,7 +17,7 @@ export function renderVariable(template, props, stringify) {
     }
 }
 
-export function renderVariables(template, props, stringify) {
+export function renderVariables(template, props, tags) {
     if(!template) return ''
 
     let pre = ''
@@ -64,6 +64,16 @@ export function renderVariables(template, props, stringify) {
             stack.push('tag')
         }
         
+        const components = tags.filter(x => {
+            return !['@if', '@else', '@section', '@head', '@slot'].includes(x)
+        })
+
+        for(let component of components) {
+            if(template.slice(i).startsWith(component) && !template.slice(i).startsWith(component + '.')) {
+                stack.push('tag')
+            }    
+        }
+        
         if(template[i] === '{' && template[i+1] === '{') {
             index = i
             stack.push('}}')
@@ -77,7 +87,8 @@ export function renderVariables(template, props, stringify) {
                 pre = template.slice(0, index)
                 post = template.slice(i + 2)
 
-                return pre + renderVariable(variable, props, stringify) + renderVariables(post, props, stringify)
+                console.log('render variables: ', {variable, props, post})
+                return pre + renderVariable(variable, props) + renderVariables(post, props, tags)
             }
         }   
     }

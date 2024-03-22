@@ -96,6 +96,7 @@ function getBlock(template, index, endtags, tags) {
                     }
                     return result
                 }
+
             }
         }
 
@@ -239,6 +240,7 @@ function getComponentTag(template, index, tags) {
         let key = 'default'
         sections[key] = ''
         for (let i = 0; i < input.length; i++) {
+            // console.log({stack, key, i}, input.slice(i, i + 10))
             if (input.slice(i).startsWith('@section')) {
                 const slot = getSlotTag(input, i);
                 key = slot.result.name
@@ -417,6 +419,7 @@ function applyTag(template, props, tag, templates, head, tags) {
 
             let res = ''
             for (let item of iterator) {
+                console.log('loop: ', { ...props, [tag.result.item]: item })
                 const result = render(tag.result.block, { ...props, [tag.result.item]: item }, templates, head, tags)
                 res += result.html
                 // head += result.head
@@ -469,11 +472,14 @@ function applyTag(template, props, tag, templates, head, tags) {
 }
 
 function render(template, props, templates, head = {}, tags) {
-    let result = renderVariables(template, props);
+    console.log('calling: renderVariables', {template, props})
+    let result = renderVariables(template, props, tags);
 
     const tag = findNextTag(result, tags)
 
     if (tag) {
+        console.log("apply tag", {result, props, tag})
+
         result = applyTag(result, props, tag, templates, head, tags)
 
         return render(result.html, props, templates, head, tags)
