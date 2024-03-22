@@ -13,6 +13,7 @@ function findMatchingPair(template, index, char) {
 }
 
 function findNextElseIf(template, index, tags) {
+    console.log('findNextElseIf', {template, index, slice: template.slice(index)})
     let skips = 0
     for (let i = index; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
@@ -30,6 +31,7 @@ function findNextElseIf(template, index, tags) {
             const result = {
                 start,
                 end: block.end,
+                endWithoutTag: block.endWithoutTag,
                 result: {
                     condition: condition.result,
                     block: block.result
@@ -43,13 +45,14 @@ function findNextElseIf(template, index, tags) {
 }
 
 function findElse(template, index, tags) {
-    let skips = 0
+    console.log('findElse', template.slice(index))
+    let stack = 0
     for (let i = index; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
-            skips += 1
+            stack += 1
         }
         if (template.slice(i).startsWith('@end')) {
-            skips -= 1
+            stack -= 1
         }
         else if (template.slice(i).startsWith('@elseif')) {
         }
@@ -73,50 +76,84 @@ function getCondition(template, index) {
 }
 
 function getBlock(template, index, endtags, tags) {
+    console.log('getBlock', template.slice(index))
     let stack = 0;
 
-    for (let i = index; i < template.length; i++) {
-        for (let tag of tags) {
-            if (tag !== '@slot' && template.slice(i).startsWith(tag)) {
-                i += 1
-                stack += 1;
+    for(let i=index; i<template.length; i++) {
+        const current = template.slice(i)
+    
+        for(let tag of tags) {
+            if(current.startsWith(tag) && tag !== '@slot') {
+                stack += 1
             }
         }
 
-        if (stack == 0) {
+        for(let tag of endtags) {
+            if(current.startsWith(tag)) {
+                stack -= 1
 
-            for (let tag of endtags) {
-                if (template.slice(i).startsWith(tag)) {
-
-                    // const tagIndex = template.indexOf(tag, index)
-                    const start = index + 1
-                    const end = i
-
-                    let result = template.slice(start, end).trim()
-
-                    if (result[0] != '<') {
-                        result = ' ' + result
+                if(stack == -1) {
+                    const result = {
+                        start: index + 1,
+                        end: i + tag.length,
+                        endWithoutTag: i,
+                        result: template.slice(index + 1, i)
                     }
-
-                    return {
-                        start,
-                        end,
-                        result
-                    }
-
+                    console.log(result)
+                    return result
                 }
+        
             }
         }
 
-
-        if (template.slice(i).startsWith('@end')) {
-            stack -= 1;
-        }
     }
 
     return null
-
 }
+
+// function getBlock(template, index, endtags, tags) {
+//     let stack = 0;
+
+//     for (let i = index; i < template.length; i++) {
+//         for (let tag of [...tags, '@section']) {
+//             if (tag !== '@slot' && template.slice(i).startsWith(tag)) {
+//                 i += 1
+//                 stack += 1;
+//             }
+//         }
+
+//         if (template.slice(i).startsWith('@end')) {
+
+//             if (stack == 0) {
+
+//                 for (let tag of endtags) {
+//                     if (template.slice(i).startsWith(tag)) {
+
+//                         // const tagIndex = template.indexOf(tag, index)
+//                         const start = index + 1
+//                         const end = i
+
+//                         let result = template.slice(start, end).trim()
+
+//                         if (result[0] != '<') {
+//                             result = ' ' + result
+//                         }
+
+//                         return {
+//                             start,
+//                             end: end + tag.length,
+//                             result
+//                         }
+//                     }
+//                 }
+//             }
+//             stack -= 1;
+//         }
+//     }
+
+//     return null
+
+// }
 
 function getIfTag(template, index, tags) {
     const condition = getCondition(template, index)
@@ -129,19 +166,16 @@ function getIfTag(template, index, tags) {
     }
 
     let elseifs = []
-    let elseif = findNextElseIf(template, condition.end, tags)
+    let elseif = findNextElseIf(template, block.endWithoutTag, tags)
 
-    if (elseif) {
-        lastIndex = elseif.end
-
-    }
     while (elseif) {
         elseifs.push(elseif.result)
-        lastIndex = elseif.end
-        elseif = findNextElseIf(template, lastIndex, tags)
+        lastIndex = elseif.endWithoutTag
+        elseif = findNextElseIf(template, elseif.endWithoutTag, tags)
     }
 
-    const elseBlock = findElse(template, lastIndex, tags)
+    console.log('before find else: ', template.slice(lastIndex - 5))
+    const elseBlock = findElse(template, lastIndex - 5, tags)
     if (elseBlock) {
         lastIndex = elseBlock.end
     }
@@ -154,9 +188,11 @@ function getIfTag(template, index, tags) {
         else: elseBlock ? elseBlock.result : ''
     }
 
+    console.log(result)
+
     return {
         start: index,
-        end: lastIndex + '@end'.length,
+        end: lastIndex,
         result
     }
 }
@@ -174,7 +210,7 @@ function getForTag(template, index, tags) {
     const block = getBlock(template, iteratorEnd, ['@end'], tags)
 
     if (block) {
-        end = block.end + '@end'.length
+        end = block.end
     }
     const result = {
         type: 'for',
@@ -302,7 +338,7 @@ function getComponentTag(template, index, tags) {
 
     return {
         start: index,
-        end: (content?.end ?? props.end ?? name.end) + '@end'.length,
+        end: (content?.end ?? props.end ?? name.end),
         result
     }
 }
@@ -313,7 +349,7 @@ function getHeadTag(template, index, tags) {
 
     return {
         start: index,
-        end: block.end + '@end'.length,
+        end: block.end,
         result: {
             type: 'head',
             content: block.result
@@ -495,6 +531,7 @@ function render(template, props, templates, head = {}, tags) {
 }
 
 export default function createEngine({ templates }) {
+    console.log({ templates: Object.keys(templates) })
 
     return {
         async render(component, loadParams) {
@@ -539,9 +576,6 @@ export default function createEngine({ templates }) {
                 addTemplateTags('@' + key)
             }
 
-            const { $slots, ...$props } = props
-
-            console.log({$slots, $props})
             let result = render(templates[name].template, props, templates, head, tags)
 
             if (result.html.startsWith('<')) {

@@ -1,6 +1,26 @@
-// // test.ava.js
+// // // test.ava.js
 import test from 'ava';
 import createEngine from '../src/render/render.js'; // Adjust the import path
+
+// const res = await render({
+//     Home: {
+//         template: '<div>@Condition({value: 4}) @end</div>'
+//     },
+//     Card: {
+//         template: '<div class="card">@slot() @CardBody() @slot("body") @end</div>'
+//     },
+//     CardBody: {
+//         template: '<div class="card-body">@slot()</div>'
+//     },
+//     Condition: {
+//         template: '<div>@if(value===1) One @elseif(value === 2 ) Two @elseif(value === 3 ) Three @else None @end</div>'
+//     }
+// })
+
+// console.log(res)
+// console.log('<!--include:Home--><div><!--include:Condition--><div>One</div></div>')
+
+
 
 async function render(templates, props) {
     const engine = createEngine({
@@ -41,6 +61,7 @@ test('renders if', async t => {
     })
 
     async function render(props) {
+        console.log('render: ', props)
         return await engine.render({ name: 'Home', props }).then(res => res.html)
     }
 

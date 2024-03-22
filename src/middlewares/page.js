@@ -56,18 +56,20 @@ async function initializeViews(folder, prefix, templates = {}) {
     const views = await readdir(folder)
     for (let view of views) {
         if (view.endsWith('.html')) {
+            const viewName = view.replace('.html', '')
+
             const content = await readFile(path.join(folder, view), 'utf-8')
             let name;
 
-            if (prefix.split('.').at(-1) === view.replace('.html', '')) {
+            if (prefix.endsWith(viewName)) {
                 name = prefix
             } else {
-                name = [prefix, view.replace('.html', '')].filter(Boolean).join('.')
+                name = [prefix, viewName].filter(Boolean).join('.')
             }
 
             templates[name] = parseTemplate(content)
         } else if ((await stat(path.resolve(path.join(folder, view)))).isDirectory) {
-            templates = {...templates, ...(await initializeViews(path.resolve(path.join(folder, view)), view, templates))}
+            templates = {...templates, ...(await initializeViews(path.resolve(path.join(folder, view)), [prefix, view].filter(Boolean).join('.'), templates))}
         }
     }
     return templates
