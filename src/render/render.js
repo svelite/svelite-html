@@ -261,11 +261,11 @@ function getComponentTag(template, index, tags) {
                 const slot = getSlotTag(input, i);
                 key = slot.result.name
                 sections[key] ??= ''
-                stack +=1
+                stack += 1
                 i = slot.end
             } else {
 
-                for (let tag of tags.filter(x => x!== '@slot')) {
+                for (let tag of tags.filter(x => x !== '@slot')) {
                     if (input.slice(i).startsWith(tag)) {
                         stack += 1
                     }
@@ -446,7 +446,7 @@ function applyTag(template, props, tag, templates, head, tags) {
                 $slots[slot] = render(tag.result.slots[slot], props, templates, head, tags).html;
             }
 
-            let res = render(template, {$props, $slots}, templates, head, tags).html;
+            let res = render(template, { ...$props, $slots }, templates, head, tags).html;
 
             if (res.startsWith('<') && !res.startsWith('<!--')) {
                 res = `<!--include:${tag.result.name}-->` + res
@@ -500,7 +500,7 @@ export default function createEngine({ templates }) {
         async render(component, loadParams) {
             const name = component.name
             let props = component.props ?? {}
-            props.content = component.content ?? []
+            let content = component.content ?? []
             let head = {}
             head[component.template] = component.head ?? ''
 
@@ -511,16 +511,16 @@ export default function createEngine({ templates }) {
                 props = { ...props, ...loadProps }
             }
 
-            if (props.content && Array.isArray(props.content)) {
-                props.content = { default: props.content }
+            if (content && Array.isArray(content)) {
+                content = { default: content }
             }
-            if (props.content && typeof props.content === 'object') {
+            if (content && typeof content === 'object') {
                 props['$slots'] = {}
-                for (let key in props.content) {
+                for (let key in content) {
                     let res = ''
-                    for (let content of props.content[key]) {
+                    for (let item of content[key]) {
 
-                        const response = await this.render(content, loadParams)
+                        const response = await this.render(item, loadParams)
                         res += response.html
 
                     }
@@ -539,7 +539,10 @@ export default function createEngine({ templates }) {
                 addTemplateTags('@' + key)
             }
 
-            let result = render(templates[name]?.template ?? `template ${name} not found.`, props, templates, head, tags)
+            const { $slots, ...$props } = props
+
+            console.log({$slots, $props})
+            let result = render(templates[name].template, props, templates, head, tags)
 
             if (result.html.startsWith('<')) {
                 result.html = `<!--include:${name}-->` + result.html

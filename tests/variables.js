@@ -193,7 +193,7 @@ test('renders component slot', async t => {
 test('renders component named slot', async t => {
     const templates = {
         Home: {
-            template: '<div>@Test({a: ds, b: 123}) Default @slot("one") ONE @end @slot("two") TWO @end @end</div>'
+            template: '<div>@Test({a: ds, b: 123}) Default @section("one") ONE @end @section("two") TWO @end @end</div>'
         },
         Test: {
             template: '<div>num: {{b}} | str: {{a}} | slot: @slot() | one: @slot("one") | two: @slot("two")</div>'
