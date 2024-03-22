@@ -77,7 +77,7 @@ function getBlock(template, index, endtags, tags) {
 
     for (let i = index; i < template.length; i++) {
         for (let tag of tags) {
-            if (template.slice(i).startsWith(tag)) {
+            if (tag !== '@slot' && template.slice(i).startsWith(tag)) {
                 i += 1
                 stack += 1;
             }
@@ -261,20 +261,21 @@ function getComponentTag(template, index, tags) {
                 const slot = getSlotTag(input, i);
                 key = slot.result.name
                 sections[key] ??= ''
+                stack +=1
                 i = slot.end
             } else {
 
-                for (let tag of tags) {
+                for (let tag of tags.filter(x => x!== '@slot')) {
                     if (input.slice(i).startsWith(tag)) {
                         stack += 1
                     }
                 }
 
-                if (input.slice(i).startsWith('@end')) {
+                if (stack > 0 && input.slice(i).startsWith('@end')) {
                     stack -= 1
 
                     if (key !== 'default')
-                        i += 4
+                        i += '@end'.length
 
                     if (stack == 0) {
                         key = 'default'
@@ -287,7 +288,6 @@ function getComponentTag(template, index, tags) {
             }
         }
 
-        console.log({input, sections})
         return sections
     }
 
@@ -446,7 +446,6 @@ function applyTag(template, props, tag, templates, head, tags) {
                 $slots[slot] = render(tag.result.slots[slot], props, templates, head, tags).html;
             }
 
-            console.log({$props, $slots})
             let res = render(template, {$props, $slots}, templates, head, tags).html;
 
             if (res.startsWith('<') && !res.startsWith('<!--')) {
@@ -465,7 +464,6 @@ function applyTag(template, props, tag, templates, head, tags) {
             return ''
         }
         else if (tag.result.type === 'slot') {
-            console.log('slot: ', props)
             const content = render(props['$slots']?.[tag.result.name] ?? '', props, templates, head, tags).html
             return content
         }

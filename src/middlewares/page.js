@@ -53,9 +53,7 @@ function getScript(templates) {
 }
 
 async function initializeViews(folder, prefix, templates = {}) {
-    console.log('initializeViews', folder)
     const views = await readdir(folder)
-    console.log({views, templates})
     for (let view of views) {
         if (view.endsWith('.html')) {
             const content = await readFile(path.join(folder, view), 'utf-8')
@@ -67,7 +65,6 @@ async function initializeViews(folder, prefix, templates = {}) {
                 name = [prefix, view.replace('.html', '')].filter(Boolean).join('.')
             }
 
-            console.log('parse: ', name, content)
             templates[name] = parseTemplate(content)
         } else if ((await stat(path.resolve(path.join(folder, view)))).isDirectory) {
             templates = {...templates, ...(await initializeViews(path.resolve(path.join(folder, view)), view, templates))}
@@ -80,7 +77,6 @@ async function renderPage(page, loadParams, config) {
 
     const templates = await initializeViews(path.resolve(config.config.views), '', {})
 
-    console.log(templates)
     const engine = createEngine({ templates })
 
     let head = ''
@@ -153,8 +149,6 @@ function pageHandler(page) {
     return async (req, res) => {
         const { head, html, script } = await renderPage(page, getLoadParams(req), req.config)
 
-        console.log({head, html, script})
-
         const template = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -182,7 +176,6 @@ export function pagesMiddleware(pages) {
     const router = Router()
 
     for (let page of pages) {
-        console.log('register page: ', page)
         router.get(page.slug, pageHandler(page))
     }
 
