@@ -13,7 +13,6 @@ function findMatchingPair(template, index, char) {
 }
 
 function findNextElseIf(template, index, tags) {
-    console.log('findNextElseIf', {template, index, slice: template.slice(index)})
     let skips = 0
     for (let i = index; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
@@ -31,7 +30,6 @@ function findNextElseIf(template, index, tags) {
             const result = {
                 start,
                 end: block.end,
-                endWithoutTag: block.endWithoutTag,
                 result: {
                     condition: condition.result,
                     block: block.result
@@ -45,7 +43,6 @@ function findNextElseIf(template, index, tags) {
 }
 
 function findElse(template, index, tags) {
-    console.log('findElse', template.slice(index))
     let stack = 0
     for (let i = index; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
@@ -76,30 +73,27 @@ function getCondition(template, index) {
 }
 
 function getBlock(template, index, endtags, tags) {
-    console.log('getBlock', template.slice(index))
     let stack = 0;
 
     for(let i=index; i<template.length; i++) {
         const current = template.slice(i)
     
         for(let tag of tags) {
-            if(current.startsWith(tag) && tag !== '@slot') {
+            if(current.startsWith(tag) && !current.startsWith(tag + '.') && tag !== '@slot') {
                 stack += 1
             }
         }
 
         for(let tag of endtags) {
-            if(current.startsWith(tag)) {
+            if(current.startsWith(tag) && !current.startsWith(tag + '.')) {
                 stack -= 1
 
                 if(stack == -1) {
                     const result = {
                         start: index + 1,
-                        end: i + tag.length,
-                        endWithoutTag: i,
+                        end: i,
                         result: template.slice(index + 1, i)
                     }
-                    console.log(result)
                     return result
                 }
         
@@ -110,50 +104,6 @@ function getBlock(template, index, endtags, tags) {
 
     return null
 }
-
-// function getBlock(template, index, endtags, tags) {
-//     let stack = 0;
-
-//     for (let i = index; i < template.length; i++) {
-//         for (let tag of [...tags, '@section']) {
-//             if (tag !== '@slot' && template.slice(i).startsWith(tag)) {
-//                 i += 1
-//                 stack += 1;
-//             }
-//         }
-
-//         if (template.slice(i).startsWith('@end')) {
-
-//             if (stack == 0) {
-
-//                 for (let tag of endtags) {
-//                     if (template.slice(i).startsWith(tag)) {
-
-//                         // const tagIndex = template.indexOf(tag, index)
-//                         const start = index + 1
-//                         const end = i
-
-//                         let result = template.slice(start, end).trim()
-
-//                         if (result[0] != '<') {
-//                             result = ' ' + result
-//                         }
-
-//                         return {
-//                             start,
-//                             end: end + tag.length,
-//                             result
-//                         }
-//                     }
-//                 }
-//             }
-//             stack -= 1;
-//         }
-//     }
-
-//     return null
-
-// }
 
 function getIfTag(template, index, tags) {
     const condition = getCondition(template, index)
@@ -166,15 +116,14 @@ function getIfTag(template, index, tags) {
     }
 
     let elseifs = []
-    let elseif = findNextElseIf(template, block.endWithoutTag, tags)
+    let elseif = findNextElseIf(template, block.end, tags)
 
     while (elseif) {
         elseifs.push(elseif.result)
-        lastIndex = elseif.endWithoutTag
-        elseif = findNextElseIf(template, elseif.endWithoutTag, tags)
+        lastIndex = elseif.end
+        elseif = findNextElseIf(template, elseif.end, tags)
     }
 
-    console.log('before find else: ', template.slice(lastIndex - 5))
     const elseBlock = findElse(template, lastIndex - 5, tags)
     if (elseBlock) {
         lastIndex = elseBlock.end
@@ -188,11 +137,9 @@ function getIfTag(template, index, tags) {
         else: elseBlock ? elseBlock.result : ''
     }
 
-    console.log(result)
-
     return {
         start: index,
-        end: lastIndex,
+        end: lastIndex + 4,
         result
     }
 }
@@ -221,7 +168,7 @@ function getForTag(template, index, tags) {
 
     return {
         start,
-        end,
+        end: end + 4,
         result
     }
 }
@@ -338,7 +285,7 @@ function getComponentTag(template, index, tags) {
 
     return {
         start: index,
-        end: (content?.end ?? props.end ?? name.end),
+        end: (content?.end ?? props.end ?? name.end) + 4,
         result
     }
 }
@@ -349,7 +296,7 @@ function getHeadTag(template, index, tags) {
 
     return {
         start: index,
-        end: block.end,
+        end: block.end + 4,
         result: {
             type: 'head',
             content: block.result
@@ -506,6 +453,11 @@ function applyTag(template, props, tag, templates, head, tags) {
     }
 
     const content = getContent()
+    console.log({
+        before: template.slice(0, tag.start),
+        content,
+        after: template.slice(tag.end)
+    })
     return {
         html: template.slice(0, tag.start) + content + template.slice(tag.end),
         head
@@ -531,7 +483,6 @@ function render(template, props, templates, head = {}, tags) {
 }
 
 export default function createEngine({ templates }) {
-    console.log({ templates: Object.keys(templates) })
 
     return {
         async render(component, loadParams) {
