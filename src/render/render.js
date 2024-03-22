@@ -75,20 +75,20 @@ function getCondition(template, index) {
 function getBlock(template, index, endtags, tags) {
     let stack = 0;
 
-    for(let i=index; i<template.length; i++) {
+    for (let i = index; i < template.length; i++) {
         const current = template.slice(i)
-    
-        for(let tag of tags) {
-            if(current.startsWith(tag) && !current.startsWith(tag + '.') && tag !== '@slot') {
+
+        for (let tag of tags) {
+            if (current.startsWith(tag) && !current.startsWith(tag + '.') && tag !== '@slot') {
                 stack += 1
             }
         }
 
-        for(let tag of endtags) {
-            if(current.startsWith(tag) && !current.startsWith(tag + '.')) {
+        for (let tag of endtags) {
+            if (current.startsWith(tag) && !current.startsWith(tag + '.')) {
                 stack -= 1
 
-                if(stack == -1) {
+                if (stack == -1) {
                     const result = {
                         start: index + 1,
                         end: i,
@@ -96,7 +96,6 @@ function getBlock(template, index, endtags, tags) {
                     }
                     return result
                 }
-        
             }
         }
 
@@ -249,7 +248,7 @@ function getComponentTag(template, index, tags) {
             } else {
 
                 for (let tag of tags.filter(x => x !== '@slot')) {
-                    if (input.slice(i).startsWith(tag)) {
+                    if (input.slice(i).startsWith(tag) && !input.slice(i).startsWith(tag + '.')) {
                         stack += 1
                     }
                 }
@@ -257,11 +256,14 @@ function getComponentTag(template, index, tags) {
                 if (stack > 0 && input.slice(i).startsWith('@end')) {
                     stack -= 1
 
-                    if (key !== 'default')
-                        i += '@end'.length
 
                     if (stack == 0) {
+
+                        if (key !== 'default')
+                            i += '@end'.length
+
                         key = 'default'
+
                     }
                 }
             }
@@ -271,6 +273,7 @@ function getComponentTag(template, index, tags) {
             }
         }
 
+        console.log({ sections })
         return sections
     }
 
