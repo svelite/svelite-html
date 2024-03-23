@@ -14,6 +14,8 @@ export async function buildcss(config) {
 }
 
 export function evaluate(code, context = {}) {
+    console.log('function evaluate')
+
 
     const pre = Object.keys(context).map(key => `var ${key} = context["${key}"];`).join('')
     return eval(pre + '\n' + code)
@@ -21,6 +23,8 @@ export function evaluate(code, context = {}) {
 
 
 export function parseTemplate(template) {
+    console.log('function parseTemplate')
+
     const serverRegex = /<script server>([\s\S]*?)<\/script>/;
     const clientRegex = /<script>([\s\S]*?)<\/script>/;
 

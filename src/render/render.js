@@ -3,6 +3,8 @@ import { renderVariable, renderVariables } from "./variable.js";
 
 
 function findMatchingPair(template, index, char) {
+    console.log('function findMatchingPair')
+
     // let inQuotes = false;
     for (let i = index; i < template.length; i++) {
         if (template.slice(i).startsWith(char)) {
@@ -13,6 +15,8 @@ function findMatchingPair(template, index, char) {
 }
 
 function findNextElseIf(template, index, tags) {
+    console.log('function findNextElseIf')
+
     let skips = 0
     for (let i = index; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
@@ -43,6 +47,8 @@ function findNextElseIf(template, index, tags) {
 }
 
 function findElse(template, index, tags) {
+    console.log('function findElse')
+
     let stack = 0
     for (let i = index; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
@@ -61,7 +67,10 @@ function findElse(template, index, tags) {
 }
 
 function getCondition(template, index) {
+    console.log('function getCondition')
+
     const start = findMatchingPair(template, index, '(') + 1
+    
 
     const end = findMatchingPair(template, start, ')')
 
@@ -73,6 +82,8 @@ function getCondition(template, index) {
 }
 
 function getBlock(template, index, endtags, tags) {
+    console.log('function getBlock')
+
     let stack = 0;
 
     for (let i = index; i < template.length; i++) {
@@ -106,6 +117,7 @@ function getBlock(template, index, endtags, tags) {
 }
 
 function getIfTag(template, index, tags) {
+    console.log('getIfTag')
     const condition = getCondition(template, index)
 
     let lastIndex = index;
@@ -145,6 +157,8 @@ function getIfTag(template, index, tags) {
 }
 
 function getForTag(template, index, tags) {
+    console.log('function getForTag')
+
     const start = index
     let end = start
 
@@ -174,6 +188,7 @@ function getForTag(template, index, tags) {
 }
 
 function getComponentName(template, index) {
+    console.log('function getComponentName')
 
     for (let i = index; i < template.length; i++) {
 
@@ -189,6 +204,8 @@ function getComponentName(template, index) {
 }
 
 function getObject(template, index) {
+    console.log('function getObject')
+
     let stack = 0
     let start = index
 
@@ -225,6 +242,8 @@ function getObject(template, index) {
 }
 
 function getComponentTag(template, index, tags) {
+    console.log('function getComponentTag')
+
     // TODO: Implement
     let name = getComponentName(template, index)
 
@@ -276,7 +295,6 @@ function getComponentTag(template, index, tags) {
             }
         }
 
-        console.log({ sections })
         return sections
     }
 
@@ -297,6 +315,8 @@ function getComponentTag(template, index, tags) {
 }
 
 function getHeadTag(template, index, tags) {
+    console.log('function getHeadTag')
+
 
     const block = getBlock(template, index + 'head'.length, ['@end'], tags)
 
@@ -311,6 +331,8 @@ function getHeadTag(template, index, tags) {
 }
 
 function getPropsTag(template, i) {
+    console.log('function getPropsTag')
+
     const startIndex = template.indexOf('(', i) + 1
     const endIndex = template.indexOf(')', i)
 
@@ -332,6 +354,8 @@ function getPropsTag(template, i) {
 }
 
 function getSlotTag(template, i) {
+    console.log('function getSlotTag')
+
     const startIndex = template.indexOf('(', i) + 1
     const endIndex = template.indexOf(')', i)
 
@@ -354,6 +378,8 @@ function getSlotTag(template, i) {
 }
 
 function findNextTag(template, tags) {
+    console.log('function findNextTag')
+
 
     for (let i = 0; i < template.length; i++) {
         if (template.slice(i).startsWith('@if')) {
@@ -389,6 +415,7 @@ function findNextTag(template, tags) {
 }
 
 function applyTag(template, props, tag, templates, head, tags) {
+    console.log('function applyTag', tag.result.type)
 
     function getContent() {
         if (tag.result.type == 'if') {
@@ -420,7 +447,6 @@ function applyTag(template, props, tag, templates, head, tags) {
 
             let res = ''
             for (let item of iterator) {
-                console.log('loop: ', { ...props, [tag.result.item]: item })
                 const result = render(tag.result.block, { ...props, [tag.result.item]: item }, templates, head, tags)
                 res += result.html
                 // head += result.head
@@ -460,11 +486,7 @@ function applyTag(template, props, tag, templates, head, tags) {
     }
 
     const content = getContent()
-    console.log({
-        before: template.slice(0, tag.start),
-        content,
-        after: template.slice(tag.end)
-    })
+    
     return {
         html: template.slice(0, tag.start) + content + template.slice(tag.end),
         head
@@ -473,14 +495,13 @@ function applyTag(template, props, tag, templates, head, tags) {
 }
 
 function render(template, props, templates, head = {}, tags) {
-    console.log('calling: renderVariables', {template, props})
+    console.log('function render')
+
     let result = renderVariables(template, props, tags);
 
     const tag = findNextTag(result, tags)
 
     if (tag) {
-        console.log("apply tag", {result, props, tag})
-
         result = applyTag(result, props, tag, templates, head, tags)
 
         return render(result.html, props, templates, head, tags)
@@ -496,6 +517,8 @@ export default function createEngine({ templates }) {
 
     return {
         async render(component, loadParams) {
+            console.log('function engine.render', component?.name)
+
             const name = component.name
             let props = component.props ?? {}
             let content = component.content ?? []
@@ -530,6 +553,7 @@ export default function createEngine({ templates }) {
             const tags = ['@if', '@for', '@section', '@slot', '@head']
 
             function addTemplateTags(name) {
+                console.log('function addTemplateTags', name)
                 tags.push(name)
             }
 

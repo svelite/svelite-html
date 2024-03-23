@@ -1,6 +1,8 @@
 import { evaluate } from "../utils.js"
 
 export function renderVariable(template, props, stringify) {
+    console.log('function renderVariable')
+
     let value = template.trim()
 
     try {
@@ -18,6 +20,8 @@ export function renderVariable(template, props, stringify) {
 }
 
 export function renderVariables(template, props, tags) {
+    console.log('function renderVariables')
+
     if(!template) return ''
 
     let pre = ''
@@ -87,7 +91,6 @@ export function renderVariables(template, props, tags) {
                 pre = template.slice(0, index)
                 post = template.slice(i + 2)
 
-                console.log('render variables: ', {variable, props, post})
                 return pre + renderVariable(variable, props) + renderVariables(post, props, tags)
             }
         }   
