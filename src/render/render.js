@@ -241,7 +241,7 @@ function getComponentTag(template, index, tags) {
         sections[key] = ''
         for (let i = 0; i < input.length; i++) {
             // console.log({stack, key, i}, input.slice(i, i + 10))
-            if (input.slice(i).startsWith('@section')) {
+            if (stack === 0 && input.slice(i).startsWith('@section')) {
                 const slot = getSlotTag(input, i);
                 key = slot.result.name
                 sections[key] ??= ''
@@ -252,6 +252,7 @@ function getComponentTag(template, index, tags) {
                 for (let tag of tags.filter(x => x !== '@slot')) {
                     if (input.slice(i).startsWith(tag) && !input.slice(i).startsWith(tag + '.')) {
                         stack += 1
+                        break;
                     }
                 }
 
