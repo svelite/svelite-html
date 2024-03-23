@@ -77,9 +77,9 @@ async function initializeViews(folder, prefix, templates = {}) {
 
 async function renderPage(page, loadParams, config) {
 
-    const templates = await initializeViews(path.resolve(config.config.views), '', {})
+    // const templates = await initializeViews(path.resolve(config.config.views), '', {})
 
-    const engine = createEngine({ templates })
+    const engine = createEngine({views: config.config.views})
 
     let head = ''
     let html = ''
@@ -108,11 +108,11 @@ async function renderPage(page, loadParams, config) {
         head += response.head
     }
 
-    const script = getScript(templates)
+    // const script = getScript(templates)
 
     return {
         html,
-        script,
+        script: '',
         head
     }
 }

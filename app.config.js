@@ -1,19 +1,15 @@
+import path from 'path'
 export default {
+	config: {
+		views: path.resolve('./edge')
+	},
 	pages: [
 		{
 			slug: '/test',
 			content: [
-				{
-					name: 'Test',
-					content: [
-						{
-							name: 'TestPage',
-							content: [
-								{ name: 'Leaf' }
-							]
-						}
-					]
-				}
+				{name: 'test', content: [
+					{name: 'test2'}
+				]}
 			]
 		}
 	],

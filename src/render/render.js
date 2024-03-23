@@ -1,3 +1,4 @@
+import { Edge } from "edge.js";
 import { evaluate } from "../utils.js";
 import { renderVariable, renderVariables } from "./variable.js";
 
@@ -513,27 +514,95 @@ function render(template, props, templates, head = {}, tags) {
     }
 }
 
-export default function createEngine({ templates }) {
+// export default function createEngine({ templates }) {
 
+//     return {
+//         async render(component, loadParams) {
+//             console.log('function engine.render', component?.name)
+
+//             const name = component.name
+//             let props = component.props ?? {}
+//             let content = component.content ?? []
+//             let head = {}
+//             head[component.template] = component.head ?? ''
+
+//             if (!templates[name]) return ''
+
+//             if (templates[name]?.load) {
+//                 const loadProps = await templates[name].load(loadParams)
+//                 props = { ...props, ...loadProps }
+//             }
+
+//             if (content && Array.isArray(content)) {
+//                 content = { default: content }
+//             }
+//             if (content && typeof content === 'object') {
+//                 props['$slots'] = {}
+//                 for (let key in content) {
+//                     let res = ''
+//                     for (let item of content[key]) {
+
+//                         const response = await this.render(item, loadParams)
+//                         res += response.html
+
+//                     }
+//                     props['$slots'][key] = res
+//                 }
+
+//             }
+
+//             const tags = ['@if', '@for', '@section', '@slot', '@head']
+
+//             function addTemplateTags(name) {
+//                 console.log('function addTemplateTags', name)
+//                 tags.push(name)
+//             }
+
+//             for (let key in templates) {
+//                 addTemplateTags('@' + key)
+//             }
+
+//             let result = render(templates[name].template, props, templates, head, tags)
+
+//             if (result.html.startsWith('<')) {
+//                 result.html = `<!--include:${name}-->` + result.html
+//             }
+//             return { html: result.html, head: Object.keys(result.head).map(x => result.head[x]).join('') }
+//         }
+//     }
+// }
+
+export default function createEngine({views}) {
+    // compile templates
+    const components = {};
+    const edge = new Edge({
+        cache: process.env.NODE_ENV === 'production',
+    })
+
+    console.log('views: ', views)
+    edge.mount(views)
+       
     return {
         async render(component, loadParams) {
+
             console.log('function engine.render', component?.name)
 
             const name = component.name
             let props = component.props ?? {}
             let content = component.content ?? []
             let head = {}
+
             head[component.template] = component.head ?? ''
 
-            if (!templates[name]) return ''
+            // if (!templates[name]) return ''
 
-            if (templates[name]?.load) {
-                const loadProps = await templates[name].load(loadParams)
-                props = { ...props, ...loadProps }
-            }
+            // if (templates[name]?.load) {
+            //     const loadProps = await templates[name].load(loadParams)
+            //     props = { ...props, ...loadProps }
+            // }
 
             if (content && Array.isArray(content)) {
-                content = { default: content }
+                content = { main: content }
             }
             if (content && typeof content === 'object') {
                 props['$slots'] = {}
@@ -545,28 +614,15 @@ export default function createEngine({ templates }) {
                         res += response.html
 
                     }
-                    props['$slots'][key] = res
+                    props['$slots'][key] = () => res
                 }
 
             }
 
-            const tags = ['@if', '@for', '@section', '@slot', '@head']
+            console.log('render', 'name', {name, props})
+            let result = await edge.render(name, props)
 
-            function addTemplateTags(name) {
-                console.log('function addTemplateTags', name)
-                tags.push(name)
-            }
-
-            for (let key in templates) {
-                addTemplateTags('@' + key)
-            }
-
-            let result = render(templates[name].template, props, templates, head, tags)
-
-            if (result.html.startsWith('<')) {
-                result.html = `<!--include:${name}-->` + result.html
-            }
-            return { html: result.html, head: Object.keys(result.head).map(x => result.head[x]).join('') }
+            return { html: result, head: '' }
         }
     }
 }
