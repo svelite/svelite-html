@@ -1,14 +1,11 @@
 import postcss from 'postcss'
 import tailwindcss from 'tailwindcss'
 
-export async function buildcss(config) {
-    console.log('buildcss', {config})
+export async function buildcss(css, config) {
 
     return postcss([
         tailwindcss(config)
-    ]).process(`@tailwind base;
-@tailwind components;
-@tailwind utilities;`).then(res => {
+    ]).process(css).then(res => {
         return res.css
     })
 }

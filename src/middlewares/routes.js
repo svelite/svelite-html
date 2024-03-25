@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { apiRoutesMiddleware } from "./api.js"
 import { pagesMiddleware } from "./page.js"
-import { staticFilesMiddleware } from "./static.js"
+import { staticFilesMiddleware, stylesMiddleware } from "./static.js"
 
 
 export function routesMiddleware() {
@@ -12,6 +12,7 @@ export function routesMiddleware() {
         router.use(staticFilesMiddleware(req.config.config.static))
         router.use(apiRoutesMiddleware(req.config.routes))
         router.use(pagesMiddleware(req.config.pages))
+        router.use(stylesMiddleware(req.config.config))
 
         return router(req, res, next)
     }

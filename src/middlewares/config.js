@@ -9,6 +9,12 @@ function normalizeConfig(config) {
     if (!config.config.views) {
         config.config.views = './views'
     }
+    if (!config.config.styles) {
+        config.config.styles = './styles'
+    }
+    if (!config.config.scripts) {
+        config.config.scripts = './scripts'
+    }
     if (!config.config.static) {
         config.config.static = './public'
     }
@@ -24,9 +30,9 @@ function normalizeConfig(config) {
 }
 
 
-export function configMiddleware(vite, configPath) {
+export function configMiddleware(configPath) {
     return async (req, res, next) => {
-        const config = await vite.ssrLoadModule(configPath)
+        const config = await import(configPath)
         req.config = normalizeConfig(config.default)
 
         next()

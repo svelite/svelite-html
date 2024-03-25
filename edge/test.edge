@@ -1,1 +1,3 @@
-<div>Test {{{ $slots.main() }}}</div>
+@include('layout')
+    <div>Test {{{ await $slots.main() }}}</div>
+@end

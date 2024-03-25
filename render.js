@@ -1,19 +1,22 @@
 import { Edge } from 'edge.js'
 import { createServer } from 'node:http'
+import createHeadTag from './src/render/head.js'
 
+const head = createHeadTag()
 const edge = Edge.create({
   cache: process.env.NODE_ENV === 'production'
 })
+
+edge.registerTag(head)
 edge.mount(new URL('./edge', import.meta.url))
 
 const server = createServer(async (req, res) => {
   const data = { 
     username: 'virk', 
     users: [{username: 'Hadi'}, {username: 'test'}] ,
-
     $slots: {main: async () => 'Hi'}
-    }
-  const html = await edge.render('home', data)
+  }
+  const html = await edge.render('test', data)
 
   res.setHeader('content-type', 'text/html')
   res.end(html)

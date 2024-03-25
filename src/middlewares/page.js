@@ -81,40 +81,33 @@ async function renderPage(page, loadParams, config) {
 
     const engine = createEngine({views: config.config.views})
 
-    let head = ''
     let html = ''
 
+    // if (config.config?.tailwindcss) {
+    //     let tailwindConfig = {};
 
-    if (config.config?.tailwindcss) {
-        let tailwindConfig = {};
+    //     if (config.config.tailwindcss === true) {
+    //         tailwindConfig = {
+    //             content: [config.config.views + '/**/*.html']
+    //         }
+    //     } else {
+    //         tailwindConfig = config.config.tailwindcss
+    //     }
 
-        if (config.config.tailwindcss === true) {
-            tailwindConfig = {
-                content: [config.config.views + '/**/*.html']
-            }
-        } else {
-            tailwindConfig = config.config.tailwindcss
-        }
+    //     const css = await buildcss(tailwindConfig)
 
-        const css = await buildcss(tailwindConfig)
-
-        head += `<style>${css}</style>`
-    }
+    //     head += `<style>${css}</style>`
+    // }
 
     for (let content of page.content) {
         const response = await engine.render(content, loadParams)
 
-        html += response.html
-        head += response.head
+        html += response
     }
 
     // const script = getScript(templates)
 
-    return {
-        html,
-        script: '',
-        head
-    }
+    return html
 }
 
 function getLoadParams(req) {
@@ -149,28 +142,10 @@ function getLoadParams(req) {
 
 function pageHandler(page) {
     return async (req, res) => {
-        const { head, html, script } = await renderPage(page, getLoadParams(req), req.config)
-
-        const template = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!--head-->
-</head>
-<body>
-    <!--body-->
-    <!--script-->
-</body>
-</html>`
-
-        const response = template
-            .replace('<!--body-->', html)
-            .replace('<!--script-->', `<script>${script}</script>`)
-            .replace('<!--head-->', head)
+        const html = await renderPage(page, getLoadParams(req), req.config)
 
         res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
-        return res.end(response)
+        return res.end(html)
     }
 }
 

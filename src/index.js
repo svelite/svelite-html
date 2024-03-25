@@ -38,25 +38,12 @@ export function createApp(configPath = './app.config.js') {
     const app = express()
 
     app.start = async (port) => {
-        const vite = await createViteServer({
-            appType: 'custom',
-            server: {
-                middlewareMode: true,
-                fs: {
-                    allow: [],
-                }
-            },
-            publicDir: false
-        })
-
-        // default
-        app.use(vite.middlewares)
         app.use(cookieParser())
         app.use(express.json())
         app.use(express.urlencoded({ extended: true }))
 
         // svelite
-        app.use(configMiddleware(vite, configPath))
+        app.use(configMiddleware(configPath))
         app.use(routesMiddleware())
 
         const {PORT = port} = process.env

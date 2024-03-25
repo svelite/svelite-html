@@ -1,6 +1,7 @@
 import { Edge } from "edge.js";
 import { evaluate } from "../utils.js";
 import { renderVariable, renderVariables } from "./variable.js";
+import createHeadTag from "./head.js";
 
 
 function findMatchingPair(template, index, char) {
@@ -71,7 +72,7 @@ function getCondition(template, index) {
     console.log('function getCondition')
 
     const start = findMatchingPair(template, index, '(') + 1
-    
+
 
     const end = findMatchingPair(template, start, ')')
 
@@ -487,7 +488,7 @@ function applyTag(template, props, tag, templates, head, tags) {
     }
 
     const content = getContent()
-    
+
     return {
         html: template.slice(0, tag.start) + content + template.slice(tag.end),
         head
@@ -572,34 +573,20 @@ function render(template, props, templates, head = {}, tags) {
 //     }
 // }
 
-export default function createEngine({views}) {
-    // compile templates
-    const components = {};
+export default function createEngine({ views }) {
+
     const edge = new Edge({
         cache: process.env.NODE_ENV === 'production',
     })
 
-    console.log('views: ', views)
     edge.mount(views)
-       
+
     return {
         async render(component, loadParams) {
-
-            console.log('function engine.render', component?.name)
-
             const name = component.name
             let props = component.props ?? {}
             let content = component.content ?? []
-            let head = {}
 
-            head[component.template] = component.head ?? ''
-
-            // if (!templates[name]) return ''
-
-            // if (templates[name]?.load) {
-            //     const loadProps = await templates[name].load(loadParams)
-            //     props = { ...props, ...loadProps }
-            // }
 
             if (content && Array.isArray(content)) {
                 content = { main: content }
@@ -607,22 +594,15 @@ export default function createEngine({views}) {
             if (content && typeof content === 'object') {
                 props['$slots'] = {}
                 for (let key in content) {
-                    let res = ''
-                    for (let item of content[key]) {
+                    let res = content[key].map(item => this.render(item, loadParams))
 
-                        const response = await this.render(item, loadParams)
-                        res += response.html
-
-                    }
-                    props['$slots'][key] = () => res
+                    props['$slots'][key] = async () => (await Promise.all(res)).join('')
                 }
-
             }
 
-            console.log('render', 'name', {name, props})
             let result = await edge.render(name, props)
 
-            return { html: result, head: '' }
+            return result
         }
     }
 }
