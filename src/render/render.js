@@ -594,13 +594,13 @@ export default function createEngine({ views }) {
             if (content && typeof content === 'object') {
                 props['$slots'] = {}
                 for (let key in content) {
-                    let res = content[key].map(item => this.render(item, loadParams))
+                    let res = content[key].map(item => this.render(item, {...props, ...loadParams}))
 
                     props['$slots'][key] = async () => (await Promise.all(res)).join('')
                 }
             }
 
-            let result = await edge.render(name, props)
+            let result = await edge.render(name, {...props, ...loadParams})
 
             return result
         }

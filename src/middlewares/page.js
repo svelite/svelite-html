@@ -100,6 +100,7 @@ async function renderPage(page, loadParams, config) {
     // }
 
     for (let content of page.content) {
+        console.log('render: page: ', loadParams)
         const response = await engine.render(content, loadParams)
 
         html += response

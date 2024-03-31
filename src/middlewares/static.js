@@ -7,20 +7,48 @@ import path from 'path'
 
 export function staticFilesMiddleware(staticConfig) {
     const router = Router()
+    console.log('static: ', staticConfig)
     if (staticConfig) {
         if (typeof staticConfig === 'object') {
-
             if (Array.isArray(staticConfig)) {
-                for (let path of staticConfig) {
-                    router.get('/*', express.static(path))
+                for (let key of staticConfig) {
+                    router.use('/', express.static(path.resolve(key)))
                 }
             } else {
-                for (let key in staticConfig)
-                    router.get(key + '*', express.static(staticConfig[key]))
+                for (let key in staticConfig) {
+                    router.use(path.join(key), express.static(path.resolve(staticConfig[key])))
+                }
             }
         } else {
-            router.get('/*', express.static(staticConfig))
+            router.use('/', express.static(path.resolve(staticConfig)))
         }
+        // if (typeof staticConfig === 'object') {
+        //     if (Array.isArray(staticConfig)) {
+        //         for (let key of staticConfig) {
+        //             router.use('/', (req, res, next) => {
+        //                 if(existsSync(path.join(key, req.url)))
+        //                     res.sendFile(path.join(key, req.url))
+        //                 next()
+        //             })
+        //         }
+        //     } else {
+        //         for (let key in staticConfig) {
+        //             router.use(path.join(key), (req, res, next) => {
+        //                 console.log('here', existsSync(path.join(staticConfig[key], req.url)))
+        //                 if(existsSync(path.join(staticConfig[key], req.url)))
+        //                     res.sendFile(path.join(staticConfig[key], req.url))
+        //                 else
+        //                     next()
+        //             })
+        //         }
+        //     }
+        // } else {
+        //     router.use('/', (req, res, next) => {
+        //         if(existsSync(path.join(key, req.url)))
+        //             res.sendFile(path.join(staticConfig, req.url))
+        //         next()
+        //     })
+        // }
     }
 
     return router
