@@ -15,13 +15,13 @@ async function renderPage(page, loadParams, config) {
     return html
 }
 
-function getLoadParams(req) {
+async function getLoadParams(req) {
     const baseUrl = new URL(req.protocol + '://' + req.headers.host + req.url).origin
     const params = req.params
     const query = req.query
     const url = req.url
     const cookies = req.cookies
-    const ctx = typeof req.config.ctx === 'function' ? req.config.ctx(req) : req.config.ctx
+    const ctx = typeof req.config.ctx === 'function' ? await req.config.ctx(req) : req.config.ctx
 
     function api(path) {
         return {
@@ -49,7 +49,7 @@ function getLoadParams(req) {
 
 function pageHandler(page) {
     return async (req, res) => {
-        const html = await renderPage(page, getLoadParams(req), req.config)
+        const html = await renderPage(page, await getLoadParams(req), req.config)
 
         res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
         return res.end(html)
