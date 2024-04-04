@@ -47,7 +47,7 @@ export function createApp(configPath = './app.config.js') {
         app.use(routesMiddleware())
 
         const {PORT = port} = process.env
-        app.listen(PORT, () => console.log('server started on localhost:' + PORT))
+        app.listen(PORT, () => console.log('server started on http://localhost:' + PORT))
     }
 
     return app

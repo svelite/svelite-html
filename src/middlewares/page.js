@@ -132,6 +132,7 @@ function getLoadParams(req) {
     }
 
     return {
+        ...req.config.ctx,
         baseUrl,
         params,
         query,
