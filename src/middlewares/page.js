@@ -21,6 +21,7 @@ function getLoadParams(req) {
     const query = req.query
     const url = req.url
     const cookies = req.cookies
+    const ctx = typeof req.config.ctx === 'function' ? req.config.ctx(req) : req.config.ctx
 
     function api(path) {
         return {
@@ -36,7 +37,7 @@ function getLoadParams(req) {
     }
 
     return {
-        ...req.config.ctx,
+        ...ctx,
         baseUrl,
         params,
         query,
