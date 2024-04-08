@@ -15,7 +15,7 @@ async function renderPage(page, loadParams, config) {
     return html
 }
 
-async function getLoadParams(req) {
+async function getLoadParams(req, props = {}) {
     const baseUrl = new URL(req.protocol + '://' + req.headers.host + req.url).origin
     const params = req.params
     const query = req.query
@@ -37,6 +37,9 @@ async function getLoadParams(req) {
     }
 
     return {
+        form: {},
+        errors: {},
+        ...props,
         ...ctx,
         baseUrl,
         params,
@@ -47,12 +50,52 @@ async function getLoadParams(req) {
     }
 }
 
-function pageHandler(page) {
+function pageHandler(page, props ={}) {
     return async (req, res) => {
-        const html = await renderPage(page, await getLoadParams(req), req.config)
+        const html = await renderPage(page, await getLoadParams(req, props), req.config)
 
         res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
         return res.end(html)
+    }
+}
+
+function pageApiHandler(page) {
+    return async (req, res) => {
+
+        const methodName = Object.keys(req.query)[0]
+
+        function findMethod(content) {
+            if(Array.isArray(content)) {
+                for(let item of content) {
+                    if(item.methods[methodName]) {
+                        return item.methods[methodName]
+                    }
+                    return findMethod(item.content)
+                }
+            } else {
+                for(let key in content) {
+                    return findMethod(content[key])   
+                }
+            }
+            return null
+        }
+
+        const method = findMethod(page.content)
+        
+        const resp = await method(await getLoadParams(req, {body: req.body}))
+
+        if(resp.cookie) {
+            for(let key in resp.cookie) {
+                res.cookie(key, resp.cookie[key], {httpOnly: true, maxAge: 60 * 60 * 24 * 1000})
+            }
+        }
+
+        if(resp.redirect) {
+            return res.redirect(resp.redirect, 302)
+        }
+        
+        return pageHandler(page, resp)(req, res)
+
     }
 }
 
@@ -61,6 +104,7 @@ export function pagesMiddleware(pages) {
 
     for (let page of pages) {
         router.get(page.slug, pageHandler(page))
+        router.post(page.slug, pageApiHandler(page))
     }
 
     return router
