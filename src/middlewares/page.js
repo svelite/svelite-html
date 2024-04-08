@@ -2,7 +2,7 @@ import createEngine from '../render/render.js'
 import { Router } from 'express'
 
 async function renderPage(page, loadParams, config) {
-    const engine = createEngine({views: config.config.views})
+    const engine = createEngine({modules: config.modules})
 
     let html = ''
 

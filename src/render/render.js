@@ -1,12 +1,6 @@
 import { Edge } from "edge.js";
 
-export default function createEngine({ views }) {
-
-    const edge = new Edge({
-        cache: process.env.NODE_ENV === 'production',
-    })
-
-    edge.mount(views)
+export default function createEngine({ modules }) {
 
     return {
         async render(component, loadParams) {
@@ -16,20 +10,35 @@ export default function createEngine({ views }) {
 
 
             if (content && Array.isArray(content)) {
-                content = { main: content }
+                content = { body: content }
             }
             if (content && typeof content === 'object') {
-                props['$slots'] = {}
                 for (let key in content) {
                     let res = content[key].map(item => this.render(item, {...props, ...loadParams}))
 
-                    props['$slots'][key] = async () => (await Promise.all(res)).join('')
+                    props[key] = (await Promise.all(res)).join('')
                 }
             }
 
-            let result = await edge.render(name, {...props, ...loadParams})
+            let result = await modules[name]({...props, ...loadParams})
 
             return result
         }
     }
 }
+
+
+function parse(obj) {
+    if (typeof obj === 'object') {
+        if (Array.isArray(obj)) {
+            return obj.join('')
+        }
+        return JSON.stringify(obj)
+    }
+    return obj ?? ''
+}
+
+export const html = (strings, ...args) => strings.reduce(
+    (acc, currentString, index) => acc + currentString + (parse(args[index]) || ""),
+    ""
+)
