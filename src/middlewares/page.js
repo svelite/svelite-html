@@ -2,11 +2,12 @@ import createEngine from '../render/render.js'
 import { Router } from 'express'
 
 async function renderPage(page, loadParams, config) {
-    const engine = createEngine({modules: config.modules})
+    const engine = createEngine()
 
     let html = ''
 
     for (let content of page.content) {
+        console.log(content)
         const response = await engine.render(content, loadParams)
 
         html += response
@@ -51,6 +52,7 @@ async function getLoadParams(req, props = {}) {
 }
 
 function pageHandler(page, props ={}) {
+    console.log('pageHandler', {page}, page.content)
     return async (req, res) => {
         const html = await renderPage(page, await getLoadParams(req, props), req.config)
 
@@ -67,8 +69,8 @@ function pageApiHandler(page) {
         function findMethod(content) {
             if(Array.isArray(content)) {
                 for(let item of content) {
-                    if(item.methods[methodName]) {
-                        return item.methods[methodName]
+                    if(item.module[methodName]) {
+                        return item.module[methodName]
                     }
                     return findMethod(item.content)
                 }
@@ -102,6 +104,7 @@ function pageApiHandler(page) {
 export function pagesMiddleware(pages) {
     const router = Router()
 
+    console.log(pages)
     for (let page of pages) {
         router.get(page.slug, pageHandler(page))
         router.post(page.slug, pageApiHandler(page))

@@ -1,10 +1,12 @@
 import { Edge } from "edge.js";
 
-export default function createEngine({ modules }) {
+export default function createEngine() {
 
     return {
         async render(component, loadParams) {
-            const name = component.name
+            console.log('render', {component})
+            console.log(component)
+            const page = component.module.default
             let props = component.props ?? {}
             let content = component.content ?? []
 
@@ -14,13 +16,15 @@ export default function createEngine({ modules }) {
             }
             if (content && typeof content === 'object') {
                 for (let key in content) {
+
+                    console.log(key, content, content[key])
                     let res = content[key].map(item => this.render(item, {...props, ...loadParams}))
 
                     props[key] = (await Promise.all(res)).join('')
                 }
             }
 
-            let result = await modules[name]({...props, ...loadParams})
+            let result = await page({...props, ...loadParams})
 
             return result
         }
