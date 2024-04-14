@@ -7,7 +7,6 @@ async function renderPage(page, loadParams, config) {
     let html = ''
 
     for (let content of page.content) {
-        console.log(content)
         const response = await engine.render(content, loadParams)
 
         html += response
@@ -52,12 +51,25 @@ async function getLoadParams(req, props = {}) {
 }
 
 function pageHandler(page, props ={}) {
-    console.log('pageHandler', {page}, page.content)
     return async (req, res) => {
+        try {
+
         const html = await renderPage(page, await getLoadParams(req, props), req.config)
 
+        
+        
         res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
         return res.end(html)
+    } catch(err) {
+        const resp = JSON.parse(err.message)
+        if(typeof resp === 'object') {
+            if(resp.redirect) {
+                return res.redirect(resp.redirect, 302)
+            }
+            
+        }
+    }
+
     }
 }
 
@@ -104,7 +116,6 @@ function pageApiHandler(page) {
 export function pagesMiddleware(pages) {
     const router = Router()
 
-    console.log(pages)
     for (let page of pages) {
         router.get(page.slug, pageHandler(page))
         router.post(page.slug, pageApiHandler(page))
