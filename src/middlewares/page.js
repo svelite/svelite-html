@@ -36,11 +36,11 @@ async function getLoadParams(req, props = {}) {
         }
     }
 
-    return {
+    const res = {
         form: {},
         errors: {},
         ...props,
-        ...ctx,
+        // ...ctx,
         baseUrl,
         params,
         query,
@@ -48,6 +48,9 @@ async function getLoadParams(req, props = {}) {
         cookies,
         api
     }
+
+    console.log(res)
+    return res
 }
 
 function pageHandler(page, props ={}) {
@@ -61,12 +64,15 @@ function pageHandler(page, props ={}) {
         res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
         return res.end(html)
     } catch(err) {
-        const resp = JSON.parse(err.message)
-        if(typeof resp === 'object') {
-            if(resp.redirect) {
-                return res.redirect(resp.redirect, 302)
+        console.log(err)
+        if(err.message.startsWith('{"')) {
+            const resp = JSON.parse(err.message)
+            if(typeof resp === 'object') {
+                if(resp.redirect) {
+                    return res.redirect(resp.redirect, 302)
+                }
+                
             }
-            
         }
     }
 
