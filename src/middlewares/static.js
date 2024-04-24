@@ -1,4 +1,4 @@
-import { readFile, readdir } from 'fs/promises'
+import { readFile } from 'fs/promises'
 import express, { Router } from "express"
 import { buildcss } from '../utils.js'
 import { existsSync, readdirSync } from 'fs'

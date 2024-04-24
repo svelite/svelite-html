@@ -4,33 +4,7 @@ import { configMiddleware } from './middlewares/config.js'
 import { routesMiddleware } from './middlewares/routes.js'
 export { html, component } from './render/render.js'
 
-// export function build(configPath = './app.config.js') {
-//     console.log('build app')
-    
-//     viteBuild({
-//         css: false,
-//         build: {
-//             outDir: './dist', // Output directory for the built files
-//             emptyOutDir: true, // Clear the output directory before building
-//             target: 'node', // Specify the target environment (Node.js)
-//             lib: {
-//                 entry: path.resolve(configPath), // Entry point of your Node.js app
-//                 formats: ['cjs'], // Output format (CommonJS)
-//             },
-//             rollupOptions: {
-//                 input: path.resolve(configPath), // Rollup input file
-//                 output: {
-//                     entryFileNames: '[name].js', // Output file name pattern
-//                     chunkFileNames: 'chunks/[name].js', // Output chunk file name pattern
-//                     format: 'cjs', // Output format (CommonJS)
-//                 },
-//             },
-//         }
-//     }).catch(err => {
-//         console.error(err);
-//         process.exit(1);
-//     });
-// }
+// TODO: Add Build command to build project for vercel
 
 export function createApp(configPath = './app.config.js') {
 
