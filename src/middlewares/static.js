@@ -22,33 +22,6 @@ export function staticFilesMiddleware(staticConfig) {
         } else {
             router.use('/', express.static(path.resolve(staticConfig)))
         }
-        // if (typeof staticConfig === 'object') {
-        //     if (Array.isArray(staticConfig)) {
-        //         for (let key of staticConfig) {
-        //             router.use('/', (req, res, next) => {
-        //                 if(existsSync(path.join(key, req.url)))
-        //                     res.sendFile(path.join(key, req.url))
-        //                 next()
-        //             })
-        //         }
-        //     } else {
-        //         for (let key in staticConfig) {
-        //             router.use(path.join(key), (req, res, next) => {
-        //                 console.log('here', existsSync(path.join(staticConfig[key], req.url)))
-        //                 if(existsSync(path.join(staticConfig[key], req.url)))
-        //                     res.sendFile(path.join(staticConfig[key], req.url))
-        //                 else
-        //                     next()
-        //             })
-        //         }
-        //     }
-        // } else {
-        //     router.use('/', (req, res, next) => {
-        //         if(existsSync(path.join(key, req.url)))
-        //             res.sendFile(path.join(staticConfig, req.url))
-        //         next()
-        //     })
-        // }
     }
 
     return router

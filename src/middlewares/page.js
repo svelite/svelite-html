@@ -21,7 +21,6 @@ async function getLoadParams(req, props = {}) {
     const query = req.query
     const url = req.url
     const cookies = req.cookies
-    const ctx = typeof req.config.ctx === 'function' ? await req.config.ctx(req) : req.config.ctx
 
     function api(path) {
         return {
@@ -56,25 +55,22 @@ async function getLoadParams(req, props = {}) {
 function pageHandler(page, props ={}) {
     return async (req, res) => {
         try {
-
-        const html = await renderPage(page, await getLoadParams(req, props), req.config)
-
-        
-        
-        res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
-        return res.end(html)
-    } catch(err) {
-        console.log(err)
-        if(err.message.startsWith('{"')) {
-            const resp = JSON.parse(err.message)
-            if(typeof resp === 'object') {
-                if(resp.redirect) {
-                    return res.redirect(resp.redirect, 302)
+            const html = await renderPage(page, await getLoadParams(req, props), req.config)
+     
+            res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
+            return res.end(html)
+        } catch(err) {
+            console.log(err)
+            if(err.message.startsWith('{"')) {
+                const resp = JSON.parse(err.message)
+                if(typeof resp === 'object') {
+                    if(resp.redirect) {
+                        return res.redirect(resp.redirect, 302)
+                    }
+                    
                 }
-                
             }
         }
-    }
 
     }
 }

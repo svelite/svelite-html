@@ -26,6 +26,7 @@ function normalizeConfig(config) {
     if (!config.ctx) {
         config.ctx = {}
     }
+
     return config
 }
 

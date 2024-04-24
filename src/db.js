@@ -134,6 +134,40 @@ export function createFileDb(path) {
 	};
 }
 
+export async function createMongoDb(uri, db) {
+
+    let adapter = await createMongoAdapter(uri, db)
+  
+    console.log({adapter})
+	return (collectionName) => {
+		return {
+			query({filters = [], page = 1, perPage= 0} = {}) {
+                
+                return adapter.query(collectionName, {
+                    filters, 
+                    pagination: {page, perPage}
+                })
+			},
+			async insert(data) {
+                data.id ??= getId();
+                data.createdAt = new Date().valueOf()
+                data.updatedAt = 0
+                const result = await adapter.insert(collectionName, data);
+				return result;
+			},
+			async remove(id) {
+                await adapter.remove(collectionName, id)
+                return true;
+			},
+			async update(data) {
+                data.updatedAt = new Date().valueOf()
+				const result = await adapter.update(collectionName, data.id, data);
+                return result
+			}
+		};
+	};
+}
+
 const createFileAdapter = (path) => {
     if(!existsSync(path)) {
         writeFileSync(path, '{}')
@@ -217,31 +251,6 @@ const createFileAdapter = (path) => {
     }
 }
 
-function applyFilters(items, filters) {
-    return filters.reduce((prev, curr) => {
-        return prev.filter((x) => applyComparison(x[curr.field], curr.operator, curr.value));
-    }, items);
-}
-
-
-function applyComparison(value, operator, compareValue) {
-    switch (operator) {
-        case '=':
-            return value === compareValue;
-        case '<':
-            return value < compareValue;
-        case '<=':
-            return value <= compareValue;
-        case '>':
-            return value > compareValue;
-        case '>=':
-            return value >= compareValue;
-        // Add other conditions as needed
-        default:
-            return true; // No comparison applied for unknown operators
-    }
-}
-
 const createMongoAdapter = async (uri, dbName) => {
     const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
     await client.connect();
@@ -322,36 +331,26 @@ const createMongoAdapter = async (uri, dbName) => {
     };
 };
 
-export async function createMongoDb(uri, db) {
+function applyFilters(items, filters) {
+    return filters.reduce((prev, curr) => {
+        return prev.filter((x) => applyComparison(x[curr.field], curr.operator, curr.value));
+    }, items);
+}
 
-    let adapter = await createMongoAdapter(uri, db)
-  
-    console.log({adapter})
-	return (collectionName) => {
-		return {
-			query({filters = [], page = 1, perPage= 0} = {}) {
-                
-                return adapter.query(collectionName, {
-                    filters, 
-                    pagination: {page, perPage}
-                })
-			},
-			async insert(data) {
-                data.id ??= getId();
-                data.createdAt = new Date().valueOf()
-                data.updatedAt = 0
-                const result = await adapter.insert(collectionName, data);
-				return result;
-			},
-			async remove(id) {
-                await adapter.remove(collectionName, id)
-                return true;
-			},
-			async update(data) {
-                data.updatedAt = new Date().valueOf()
-				const result = await adapter.update(collectionName, data.id, data);
-                return result
-			}
-		};
-	};
+function applyComparison(value, operator, compareValue) {
+    switch (operator) {
+        case '=':
+            return value === compareValue;
+        case '<':
+            return value < compareValue;
+        case '<=':
+            return value <= compareValue;
+        case '>':
+            return value > compareValue;
+        case '>=':
+            return value >= compareValue;
+        // Add other conditions as needed
+        default:
+            return true; // No comparison applied for unknown operators
+    }
 }

@@ -1,10 +1,8 @@
-import { createServer as createViteServer, build as viteBuild } from 'vite'
-import path from 'path'
 import express from 'express'
 import cookieParser from 'cookie-parser'
 import { configMiddleware } from './middlewares/config.js'
 import { routesMiddleware } from './middlewares/routes.js'
-export { html } from './render/render.js'
+export { html, component } from './render/render.js'
 
 // export function build(configPath = './app.config.js') {
 //     console.log('build app')

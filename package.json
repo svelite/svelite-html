@@ -5,7 +5,8 @@
   },
   "version": "1.0.1-next.70",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -17,10 +18,12 @@
     "cookie-parser": "^1.4.6",
     "edge.js": "^6.0.2",
     "express": "^4.19.1",
+    "ijk": "^0.24.0",
     "mongodb": "^6.5.0",
     "nanoid": "^5.0.6",
     "postcss": "^8.4.38",
     "sirv": "^2.0.4",
+    "svelite-html": "^1.0.1-next.70",
     "tailwindcss": "^3.4.1",
     "vite": "^5.2.2"
   },
@@ -29,7 +32,9 @@
       "default": "./src/index.js"
     },
     "./db": {
-      "default": "./src/db.js"
+      "default": "./src/db.js",
+      "types": "./src/db.d.ts"
+
     }
   },
   "devDependencies": {
