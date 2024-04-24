@@ -21,6 +21,7 @@ async function getLoadParams(req, props = {}) {
     const query = req.query
     const url = req.url
     const cookies = req.cookies
+    const ctx = typeof req.config.ctx === 'function' ? await req.config.ctx(req) : req.config.ctx
 
     function api(path) {
         return {
@@ -39,7 +40,7 @@ async function getLoadParams(req, props = {}) {
         form: {},
         errors: {},
         ...props,
-        // ...ctx,
+        ...ctx,
         baseUrl,
         params,
         query,
@@ -47,8 +48,7 @@ async function getLoadParams(req, props = {}) {
         cookies,
         api
     }
-
-    console.log(res)
+    
     return res
 }
 

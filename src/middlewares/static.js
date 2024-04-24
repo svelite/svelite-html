@@ -7,7 +7,6 @@ import path from 'path'
 
 export function staticFilesMiddleware(staticConfig) {
     const router = Router()
-    console.log('static: ', staticConfig)
     if (staticConfig) {
         if (typeof staticConfig === 'object') {
             if (Array.isArray(staticConfig)) {
