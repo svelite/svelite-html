@@ -60,15 +60,20 @@ function pageHandler(page, props ={}) {
             res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
             return res.end(html)
         } catch(err) {
-            console.log(err)
             if(err.message.startsWith('{"')) {
                 const resp = JSON.parse(err.message)
                 if(typeof resp === 'object') {
+                    if(resp.cookie) {
+                        for(let key in resp.cookie) {
+                            res.cookie(key, resp.cookie[key], {httpOnly: true, maxAge: 60 * 60 * 24 * 1000})
+                        }
+                    }
                     if(resp.redirect) {
                         return res.redirect(resp.redirect, 302)
                     }
-                    
                 }
+            } else {
+                throw err
             }
         }
 
@@ -111,7 +116,6 @@ function pageApiHandler(page) {
         }
         
         return pageHandler(page, resp)(req, res)
-
     }
 }
 
