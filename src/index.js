@@ -2,7 +2,8 @@ import express from 'express'
 import cookieParser from 'cookie-parser'
 import { readFile } from 'fs/promises'
 import { buildcss, loadPages } from './utils.js'
-import { readdirSync } from 'fs'
+import { existsSync, readdirSync } from 'fs'
+import path from 'path'
 export { html, component } from './render/render.js'
 
 // TODO: Add Build command to build project for vercel
@@ -68,10 +69,10 @@ export function createApp({ middlewares, pages, routes, static: staticConfig, cs
                 }
 
                 try {
-                    const html = await page.layout.default(props, html)
+                    const response = await page.layout.default(props, html)
 
                     res.writeHead(200, 'OK', { 'Content-Type': 'text/html' })
-                    return res.end(html)
+                    return res.end(response)
                 } catch (err) {
                     if (err.message.startsWith('{"')) {
                         const response = JSON.parse(err.message)
