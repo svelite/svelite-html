@@ -151,7 +151,6 @@ export function createApp({ middlewares, pages, routes, static: staticConfig, cs
                 app.get('/styles/' + file, async (req, res) => {
                     const content = await readFile(path.join(css.path, file))
 
-                    console.log(css.tailwindcss)
                     const result = await buildcss(content, css.tailwindcss)
 
                     res.end(result)
