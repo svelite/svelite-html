@@ -26,9 +26,7 @@ export async function loadPages(folder, slug, layouts = []) {
         pages.push({
             layout: mergeLayouts(layouts, layout),
             slug,
-            modules: [
-                await import(folder + '/index.js')
-            ]
+            module: await import(folder + '/index.js')
         })
     }
 

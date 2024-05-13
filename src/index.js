@@ -41,9 +41,7 @@ export function createApp({ middlewares, pages, routes, static: staticConfig, cs
         }
 
         // pages
-        for (let index in pages) {
-            const page = pages[+index]
-
+        for (let page of pages) {
             app.get(page.slug, async (req, res) => {
 
                 const props = {
@@ -54,11 +52,7 @@ export function createApp({ middlewares, pages, routes, static: staticConfig, cs
                     cookies: req.cookies,
                 }
 
-                let html = ''
-                for (let i in page.modules) {
-                    const mod = page.modules[i]
-                    html += mod.default(props)
-                }
+                let html = page.module.default(props)
 
                 if (!page.layout?.default) {
                     page.layout = {
@@ -96,10 +90,8 @@ export function createApp({ middlewares, pages, routes, static: staticConfig, cs
             app.post(page.slug, async (req, res) => {
                 const methodName = Object.keys(req.query)[0]
 
-                for (let i in page.modules) {
-                    const method = page.modules[i][methodName]
-                    console.log(page.modules[i])
-                    if (!method) continue;
+                const method = page.module[methodName]
+                if (method) {
                     const response = await method(props)
 
                     if (response.cookie) {
@@ -114,6 +106,8 @@ export function createApp({ middlewares, pages, routes, static: staticConfig, cs
                     if (response.redirect) {
                         return res.redirect(302, response.redirect)
                     }
+                } else {
+                    return res.json({status: 404, message: 'Method not found'})
                 }
             })
         }
