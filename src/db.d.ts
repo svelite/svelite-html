@@ -5,7 +5,7 @@ type FileDbOptions = any
 type MongoDbOptions = any
 type HttpDbOptions = any
 
-export const createMemoryDb = (options: MemoryDbOptions) => DB
-export const createFileDb = (options: FileDbOptions) => DB
-export const createMongoDb = (options: MongoDbOptions) => DB
-export const createHttpDb = (options: HttpDbOptions) => DB
+export type createMemoryDb = (options: MemoryDbOptions) => DB
+export type createFileDb = (options: FileDbOptions) => DB
+export type createMongoDb = (options: MongoDbOptions) => DB
+export type createHttpDb = (options: HttpDbOptions) => DB
