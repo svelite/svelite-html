@@ -19,7 +19,7 @@ export const html = (strings, ...args) => {
 
 export function component({template, script}) {
     const result = (props, body) => {
-        if(Array.isArray(props)) {
+        if(Array.isArray(props) || typeof props !== 'object') {
             return template({}, props)
         }
         return template(props, body)

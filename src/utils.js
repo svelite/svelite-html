@@ -31,7 +31,7 @@ export async function loadPages(folder, slug, layouts = []) {
     }
 
     for (let fileName of fileNames) {
-        if (!fileName.endsWith('.js')) {
+        if (!fileName.endsWith('.js') && !fileName.startsWith('.')) {
             const res = await loadPages(folder + '/' + fileName, slug === '/' ? slug + fileName : slug + '/' + fileName, [...layouts, layout])
             pages = [...pages, ...res]
         }
