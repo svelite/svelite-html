@@ -17,26 +17,51 @@ export function createMemoryDb(initialData = {}) {
 
     return (table = "") => {
         return {
-            async query({ filters, page = 1, perPage = 10 }) {
-                if (!_data[table]) {
-                    return {data:[], total: 0, page: 1, perPage: 0};
+            query() {
+                let filters = []
+
+                async function paginate(page = 1, perPage = 10) {
+                    let items = applyFilters(_data[table] ?? [], filters)
+
+                    return {
+                        data: perPage === 0 ? items : items.slice(
+                            (page - 1) * perPage,
+                            page * perPage
+                        ),
+                        total: items.length,
+                        page: page,
+                        perPage: perPage === 0 ? items.length : Math.min(items.length, perPage)
+                    }
                 }
 
-                let items = applyFilters(_data[table], filters)
+                async function first() {
+                    let items = applyFilters(_data[table] ?? [], filters)
+
+                    return items[0] 
+                }
+
+                function filter(field, operator, value) {
+                    filters.push({field, operator, value})
+                    return {
+                        filter,
+                        all,
+                        first,
+                        paginate
+                    }
+                }
+
+                async function all() {
+                    let items = applyFilters(_data[table] ?? [], filters)
+
+                    return items
+                }
 
                 return {
-                    data: perPage === 0 ? items : items.slice(
-                        (page - 1) * perPage,
-                        page * perPage
-                    ),
-                    total: items.length,
-                    page: page,
-                    perPage: perPage === 0 ? items.length : Math.min(items.length, perPage)
+                    all,
+                    filter,
+                    first,
+                    paginate
                 }
-                // return {
-                //     data: _data[table]
-                // }
-
             },
             async insert(data) {
                 if(!_data[table])
@@ -83,37 +108,37 @@ export function createMemoryDb(initialData = {}) {
 
 /** @type {import('./db.types').createHttpDbType} */
 
-export function createHttpDb(base_url, token) {
-    return (table = "") => {
-        async function call(path, body) {
+// export function createHttpDb(base_url, token) {
+//     return (table = "") => {
+//         async function call(path, body) {
 
-            console.log('db:', `${base_url}/${token}/${table}/${path}`, body)
-            const response = await fetch(`${base_url}/${token}/${table}/${path}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(body)
-            }).then(res => res.json())
-            return response;
-        }
+//             console.log('db:', `${base_url}/${token}/${table}/${path}`, body)
+//             const response = await fetch(`${base_url}/${token}/${table}/${path}`, {
+//                 method: 'POST',
+//                 headers: {
+//                     'Content-Type': 'application/json'
+//                 },
+//                 body: JSON.stringify(body)
+//             }).then(res => res.json())
+//             return response;
+//         }
 
-        return {
-            async query({ filters, page, perPage }) {
-                return call('query', { filters, page, perPage })
-            },
-            async insert(data) {
-                return call('insert', data)
-            },
-            async update(data) {
-                return call('update', data)
-            },
-            async remove(id) {
-                return call('remove', { id })
-            }
-        }
-    }
-}
+//         return {
+//             async query({ filters, page, perPage }) {
+//                 return call('query', { filters, page, perPage })
+//             },
+//             async insert(data) {
+//                 return call('insert', data)
+//             },
+//             async update(data) {
+//                 return call('update', data)
+//             },
+//             async remove(id) {
+//                 return call('remove', { id })
+//             }
+//         }
+//     }
+// }
 
 /** @type {import('./db.types').createFileDbType} */
 export function createFileDb({path}) {
@@ -122,12 +147,9 @@ export function createFileDb({path}) {
 
 	return (collectionName) => {
 		return {
-			query({filters = [], page = 1, perPage= 0} = {}) {
+			query() {
                 
-                return adapter.query(collectionName, {
-                    filters, 
-                    pagination: {page, perPage}
-                })
+                return adapter.query(collectionName)
 			},
 			async insert(data) {
                 data.id ??= getId();
@@ -156,12 +178,8 @@ export function createMongoDb({uri, db}) {
   
 	return (collectionName) => {
 		return {
-			query({filters = [], page = 1, perPage= 0} = {}) {
-                
-                return adapter.query(collectionName, {
-                    filters, 
-                    pagination: {page, perPage}
-                })
+			query() {
+                return adapter.query(collectionName)
 			},
 			async insert(data) {
                 data._id ??= new UUID();
@@ -225,23 +243,55 @@ const createFileAdapter = (path) => {
             return data;
         },
 
-        async query(collection, {pagination = {page: 1, perPage: 0}, filters = []}) {
-            await init()
+        query(collection) {
+            let filters = []
 
-            if (!db[collection]) {
-                return {data:[], total: 0, page: 1, perPage: 0};
+            async function paginate(page = 1, perPage = 10) {
+                await init()
+
+                let items = applyFilters(db[collection] ?? [], filters)
+
+                return {
+                    data: perPage === 0 ? items : items.slice(
+                        (page - 1) * perPage,
+                        page * perPage
+                    ),
+                    total: items.length,
+                    page: page,
+                    perPage: perPage === 0 ? items.length : Math.min(items.length, perPage)
+                }
             }
 
-            let items = applyFilters(db[collection], filters)
+            async function first() {
+                await init()
+                let items = applyFilters(db[collection] ?? [], filters)
+
+                return items[0] 
+            }
+
+            function filter(field, operator, value) {
+                filters.push({field, operator, value})
+                return {
+                    filter,
+                    all,
+                    first,
+                    paginate
+                }
+            }
+
+            async function all() {
+                await init()
+
+                let items = applyFilters(db[collection] ?? [], filters)
+
+                return items
+            }
 
             return {
-                data: pagination.perPage === 0 ? items : items.slice(
-                    (pagination.page - 1) * pagination.perPage,
-                    pagination.page * pagination.perPage
-                ),
-                total: items.length,
-                page: pagination.page,
-                perPage: pagination.perPage === 0 ? items.length : Math.min(items.length, pagination.perPage)
+                all,
+                filter,
+                first,
+                paginate
             }
         },
 
@@ -298,64 +348,109 @@ const createMongoAdapter = (uri, dbName) => {
             return result.insertedId
         },
 
-        async query(collectionName, { pagination: { page = 1, perPage = 0 }, filters = {} }) {
-            await init()
-
+        query(collectionName) {
+            const filters = []
             const collection = db.collection(collectionName);
 
-            // TODO: filters
-            let query = {}
+            function applyMongoFilters() {
+              // TODO: filters
+              let query = {}
 
-            for (const filter of filters) {
-                query[filter.field] = {};
-                switch (filter.operator) {
-                    case '=':
-                        query[filter.field] = filter.value;
-                        break;
-                    case '!=':
-                        query[filter.field]['$ne'] = filter.value;
-                        break;
-                    case '<':
-                        query[filter.field]['$lt'] = filter.value;
-                        break;
-                    case '<=':
-                        query[filter.field]['$lte'] = filter.value;
-                        break;
-                    case '>':
-                        query[filter.field]['$gt'] = filter.value;
-                        break;
-                    case '>=':
-                        query[filter.field]['$gte'] = filter.value;
-                        break;
-                    // Add other conditions as needed
-                    default:
-                        break;
+              for (const filter of filters) {
+                  query[filter.field] = {};
+                  switch (filter.operator) {
+                      case '=':
+                          query[filter.field] = filter.value;
+                          break;
+                      case '!=':
+                          query[filter.field]['$ne'] = filter.value;
+                          break;
+                      case '<':
+                          query[filter.field]['$lt'] = filter.value;
+                          break;
+                      case '<=':
+                          query[filter.field]['$lte'] = filter.value;
+                          break;
+                      case '>':
+                          query[filter.field]['$gt'] = filter.value;
+                          break;
+                      case '>=':
+                          query[filter.field]['$gte'] = filter.value;
+                          break;
+                      // Add other conditions as needed
+                      default:
+                          break;
+                  }
+              }
+    
+            //    query = collection.find(query)
+            return query
+      
+            }
+            
+            function filter(field, operator, value) {
+                filters.push({field, operator, value})
+
+                return {
+                    filter,
+                    all,
+                    first,
+                    paginate
                 }
             }
 
-            let total = await collection.count(query);
+            async function all() {
+                await init()
 
-            query = collection.find(query)
+                const query = applyMongoFilters()
 
-            let data;
-            if (perPage > 0) {
-                data = await query.skip((page - 1) * perPage)
-                                   .limit(perPage)
-                                   .toArray();
-            } else {
-                data = await query.toArray();
+                return collection.find(query).toArray();
             }
 
+            async function first() {
+                await init()
+
+                const query = applyMongoFilters()
+                return collection.find(query).toArray()[0];
+            }
+
+            async function paginate(page = 1, perPage = 0) {
+                await init()
+
+                const query = applyMongoFilters()
+
+                console.log({query})
+                let total = await collection.count(query)
+                
+                let data;
+                if(perPage == 0) {
+                    data = await collection.find(query).toArray()
+                } else {
+                    data = await collection.find(query).skip((page - 1) * perPage)
+                        .limit(perPage)
+                        .toArray();
+                }
+
+                return {
+                    data: data.map(x => {
+                        const id = x._id
+                        delete x['_id']
+                        return { id, ...x }
+                    }),
+                    total,
+                    page: page,
+                    perPage: perPage === 0 ? total : Math.min(total, perPage)
+                };
+            }
+
+
             return {
-                data: data.map(x => {
-                    const id = x._id
-                    delete x['_id']
-                    return { id, ...x }
-                }),
-                total,
-                page: page,
-                perPage: perPage === 0 ? total : Math.min(total, perPage)
-            };
+                filter,
+                all,
+                first,
+                paginate
+            }
+
         },
 
         async update(collectionName, id, data) {

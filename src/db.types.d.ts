@@ -1,13 +1,23 @@
 type FilterOperators = "=" | '!=' | '>' | '>=' | '<' | '<='
 type QueryFilters = { field: string, operator: FilterOperators, value: any}
-
-type QueryParams = { filters: QueryFilters[], page: number, perPage: number }
-type QueryResult<T> = { page: number, perPage: number, total: number, data: T[] }
+ 
+type QueryPaginatedResult<T> = { page: number, perPage: number, total: number, data: T[] }
 type InsertParams<T> = T
 type WithId<T> = {id: string} & T;
 
+type QueryFirstType = () => Promise<WithId<T>>
+type QueryAllType = () => Promise<Array<WithId<T>>>
+type QueryPaginateType = (page: number, perPage: number) => Promise<QueryPaginatedResult<T>>
+type QueryFilterType = (field: string, operator: FilterOperators, value: any) => QueryType
+type QueryType = { 
+    first: QueryFirstType, 
+    all: QueryAllType, 
+    paginate: QueryPaginateType
+    filter: QueryFilterType
+}
+
 type DB = <T extends object>(collectionName: string) => {
-    query: (params: QueryParams) => Promise<QueryResult<T>>,
+    query: () => QueryType,
     insert: (data: InsertParams<T>) => Promise<WithId<T>>,
     update: (data: WithId<T>) => Promise<WithId<T>>,
     remove: (id: string) => Promise<boolean>,
