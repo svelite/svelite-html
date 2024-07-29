@@ -8,6 +8,7 @@ function parse(obj) {
     return obj ?? ''
 }
 
+/** @type {import('../index.types').htmlType} */
 export const html = (strings, ...args) => {
     const res = strings.reduce(
         (acc, currentString, index) => acc + currentString + (parse(args[index]) || ""),
@@ -17,6 +18,7 @@ export const html = (strings, ...args) => {
     return res
 }
 
+/** @type {import('../index.types').componentType} */
 export function component({template, script}) {
     const result = (props, body) => {
         if(Array.isArray(props) || typeof props !== 'object') {

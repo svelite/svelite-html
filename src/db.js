@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import {MongoClient} from 'mongodb'
+import { existsSync, writeFileSync } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
+import {MongoClient, UUID} from 'mongodb'
 
 import {customAlphabet} from 'nanoid';
 
@@ -7,33 +8,43 @@ const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 
 export const getId = customAlphabet(alphabet, 8);
 
-// TODO: Cleanup structure of db
-// Use one function and multiple adapters.
-// Add Mongodb adapter
+// TODO: Use one function and multiple adapters.
+
+/** @type {import('./db.types').createMemoryDbType} */
+
 export function createMemoryDb(initialData = {}) {
     const _data = initialData
 
     return (table = "") => {
         return {
-            async query({ filters, page, perPage }) {
-                if (!_data[table]) return []
+            async query({ filters, page = 1, perPage = 10 }) {
+                if (!_data[table]) {
+                    return {data:[], total: 0, page: 1, perPage: 0};
+                }
+
+                let items = applyFilters(_data[table], filters)
 
                 return {
-                    data: _data[table]
+                    data: perPage === 0 ? items : items.slice(
+                        (page - 1) * perPage,
+                        page * perPage
+                    ),
+                    total: items.length,
+                    page: page,
+                    perPage: perPage === 0 ? items.length : Math.min(items.length, perPage)
                 }
+                // return {
+                //     data: _data[table]
+                // }
 
             },
             async insert(data) {
-
-                console.log('insert: ', data)
                 if(!_data[table])
                     _data[table] = []
                 
                 data.id ??= getId();
                 data.createdAt = new Date().valueOf()
                 data.updatedAt = 0
-
-                console.log('insert: ', data)
 
                 _data[table].push(data)
 
@@ -69,6 +80,9 @@ export function createMemoryDb(initialData = {}) {
     }
 }
 
+
+/** @type {import('./db.types').createHttpDbType} */
+
 export function createHttpDb(base_url, token) {
     return (table = "") => {
         async function call(path, body) {
@@ -101,7 +115,8 @@ export function createHttpDb(base_url, token) {
     }
 }
 
-export function createFileDb(path) {
+/** @type {import('./db.types').createFileDbType} */
+export function createFileDb({path}) {
 
     const adapter = createFileAdapter(path)
 
@@ -134,11 +149,11 @@ export function createFileDb(path) {
 	};
 }
 
-export async function createMongoDb(uri, db) {
+/** @type {import('./db.types').createMongoDbType} */
+export function createMongoDb({uri, db}) {
 
-    let adapter = await createMongoAdapter(uri, db)
+    let adapter = createMongoAdapter(uri, db)
   
-    console.log({adapter})
 	return (collectionName) => {
 		return {
 			query({filters = [], page = 1, perPage= 0} = {}) {
@@ -149,11 +164,13 @@ export async function createMongoDb(uri, db) {
                 })
 			},
 			async insert(data) {
-                data.id ??= getId();
+                data._id ??= new UUID();
                 data.createdAt = new Date().valueOf()
                 data.updatedAt = 0
                 const result = await adapter.insert(collectionName, data);
-				return result;
+
+                delete data['_id']
+                return {id: result, ...data};
 			},
 			async remove(id) {
                 await adapter.remove(collectionName, id)
@@ -169,33 +186,37 @@ export async function createMongoDb(uri, db) {
 }
 
 const createFileAdapter = (path) => {
-    if(!existsSync(path)) {
-        writeFileSync(path, '{}')
-    }
-
-    let db = {}
-
-    function read() {
-        const file = readFileSync(path);
-        db = JSON.parse(file)
-    }
-    read()
-
-    function write() {
-        writeFileSync(path, JSON.stringify(db));
-    }
-
+    let db = null;
     let isDirty = false;
 
-    setInterval(() => {
-        if(isDirty) {
-            write()
+    async function init() {
+        if(!existsSync(path)) {
+            writeFileSync(path, '{}')
         }
-        isDirty = false
-    }, 2000)
+        if(!db) {
+            await read()
+        }
+    }
+
+    async function read() {
+        const file = await readFile(path, 'utf-8');
+        db = JSON.parse(file)
+    }
+
+    async function write() {
+        await writeFile(path, JSON.stringify(db));
+    }
+
+    setInterval(async () => {
+        if(isDirty) {
+            await write()
+            isDirty = false
+        }
+    }, 1000)
 
     return {
         async insert(collection, data) {
+            await init()
             if (!db[collection]) {
                 db[collection] = [];
             }
@@ -205,6 +226,8 @@ const createFileAdapter = (path) => {
         },
 
         async query(collection, {pagination = {page: 1, perPage: 0}, filters = []}) {
+            await init()
+
             if (!db[collection]) {
                 return {data:[], total: 0, page: 1, perPage: 0};
             }
@@ -223,6 +246,8 @@ const createFileAdapter = (path) => {
         },
 
         async update(collection, id, data) {
+            await init()
+
             if (!db[collection]) {
                 return null;
             }
@@ -236,6 +261,8 @@ const createFileAdapter = (path) => {
         },
 
         async remove(collection, id) {
+            await init()
+
             if (!db[collection]) {
                 return null;
             }
@@ -251,19 +278,29 @@ const createFileAdapter = (path) => {
     }
 }
 
-const createMongoAdapter = async (uri, dbName) => {
-    const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-    await client.connect();
-    const db = client.db(dbName);
+const createMongoAdapter = (uri, dbName) => {
+    const client = new MongoClient(uri, { });
+
+    let db;
+    async function init() {
+        if(db) return;
+        
+        await client.connect();
+        db = client.db(dbName);
+    }
+    
 
     return {
         async insert(collectionName, data) {
+            await init()
             const collection = db.collection(collectionName);
             const result = await collection.insertOne(data);
             return result.insertedId
         },
 
         async query(collectionName, { pagination: { page = 1, perPage = 0 }, filters = {} }) {
+            await init()
+
             const collection = db.collection(collectionName);
 
             // TODO: filters
@@ -274,6 +311,9 @@ const createMongoAdapter = async (uri, dbName) => {
                 switch (filter.operator) {
                     case '=':
                         query[filter.field] = filter.value;
+                        break;
+                    case '!=':
+                        query[filter.field]['$ne'] = filter.value;
                         break;
                     case '<':
                         query[filter.field]['$lt'] = filter.value;
@@ -293,9 +333,10 @@ const createMongoAdapter = async (uri, dbName) => {
                 }
             }
 
+            let total = await collection.count(query);
+
             query = collection.find(query)
 
-            let total = query.countDocuments;
             let data;
             if (perPage > 0) {
                 data = await query.skip((page - 1) * perPage)
@@ -306,7 +347,11 @@ const createMongoAdapter = async (uri, dbName) => {
             }
 
             return {
-                data,
+                data: data.map(x => {
+                    const id = x._id
+                    delete x['_id']
+                    return { id, ...x }
+                }),
                 total,
                 page: page,
                 perPage: perPage === 0 ? total : Math.min(total, perPage)
@@ -314,18 +359,27 @@ const createMongoAdapter = async (uri, dbName) => {
         },
 
         async update(collectionName, id, data) {
+            await init()
+
+            delete data['id']
             const collection = db.collection(collectionName);
-            const result = await collection.findOneAndUpdate(
-                { _id: id },
+            
+            await collection.findOneAndUpdate(
+                { _id: new UUID(id) },
                 { $set: data },
-                { returnOriginal: false }
             );
-            return result.value;
+
+            return {id: new UUID(id), ...data}
+            // return result.value;
         },
 
         async remove(collectionName, id) {
+            await init()
+
             const collection = db.collection(collectionName);
-            const result = await collection.findOneAndDelete({ _id: id });
+            
+            const result = await collection.findOneAndDelete({ _id: new UUID(id) });
+
             return result.value;
         }
     };
@@ -341,6 +395,8 @@ function applyComparison(value, operator, compareValue) {
     switch (operator) {
         case '=':
             return value === compareValue;
+        case '!=':
+            return value !== compareValue;
         case '<':
             return value < compareValue;
         case '<=':

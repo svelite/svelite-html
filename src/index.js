@@ -1,13 +1,14 @@
 import express from 'express'
 import cookieParser from 'cookie-parser'
-import { readFile } from 'fs/promises'
+import { readFile } from 'node:fs/promises'
 import { buildcss, loadPages } from './utils.js'
-import { existsSync, readdirSync } from 'fs'
-import path from 'path'
+import { existsSync, readdirSync } from 'node:fs'
+import path from 'node:path'
 export { html, component } from './render/render.js'
 
 // TODO: Add Build command to build project for vercel
 
+/** @type {import('./index.types').createAppType} */
 export function createApp({ middlewares, pages, routes, static: staticConfig, css }) {
     const app = express()
 

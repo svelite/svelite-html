@@ -6,7 +6,7 @@
   "version": "1.0.1-next.79",
   "description": "",
   "main": "src/index.js",
-  "types": "src/index.d.ts",
+  "types": "src/index.types.d.ts",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -20,7 +20,8 @@
     "mongodb": "^6.5.0",
     "nanoid": "^5.0.6",
     "postcss": "^8.4.38",
-    "tailwindcss": "^3.4.1"
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.5.4"
   },
   "exports": {
     ".": {
@@ -38,6 +39,8 @@
     }
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.7",
+    "@types/express": "^4.17.21",
     "ava": "^6.1.2",
     "supertest": "^6.3.4"
   }
