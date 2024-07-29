@@ -350,7 +350,6 @@ const createMongoAdapter = (uri, dbName) => {
 
         query(collectionName) {
             const filters = []
-            const collection = db.collection(collectionName);
 
             function applyMongoFilters() {
               // TODO: filters
@@ -401,6 +400,7 @@ const createMongoAdapter = (uri, dbName) => {
 
             async function all() {
                 await init()
+                const collection = db.collection(collectionName);
 
                 const query = applyMongoFilters()
 
@@ -409,6 +409,7 @@ const createMongoAdapter = (uri, dbName) => {
 
             async function first() {
                 await init()
+                const collection = db.collection(collectionName);
 
                 const query = applyMongoFilters()
                 return collection.find(query).toArray()[0];
@@ -416,10 +417,10 @@ const createMongoAdapter = (uri, dbName) => {
 
             async function paginate(page = 1, perPage = 0) {
                 await init()
+                const collection = db.collection(collectionName);
 
                 const query = applyMongoFilters()
 
-                console.log({query})
                 let total = await collection.count(query)
                 
                 let data;
