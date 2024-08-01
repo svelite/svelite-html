@@ -404,7 +404,12 @@ const createMongoAdapter = (uri, dbName) => {
 
                 const query = applyMongoFilters()
 
-                return collection.find(query).toArray();
+                return collection.find(query).toArray().map(x => {
+                    const id = x._id
+                    delete x._id
+                    x.id = id
+                    return x
+                });
             }
 
             async function first() {
@@ -412,7 +417,13 @@ const createMongoAdapter = (uri, dbName) => {
                 const collection = db.collection(collectionName);
 
                 const query = applyMongoFilters()
-                return collection.find(query).toArray()[0];
+                const res = collection.find(query).toArray()[0];
+                if(res) {
+                    const id = res._id
+                    delete res._id
+                    res.id = id
+                }
+                return res
             }
 
             async function paginate(page = 1, perPage = 0) {
