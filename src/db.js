@@ -240,7 +240,7 @@ const createFileAdapter = (path) => {
             }
             db[collection].push(data);
             isDirty = true
-            return data;
+            return JSON.parse(JSON.stringify(data));
         },
 
         query(collection) {
@@ -249,7 +249,7 @@ const createFileAdapter = (path) => {
             async function paginate(page = 1, perPage = 10) {
                 await init()
 
-                let items = applyFilters(db[collection] ?? [], filters)
+                let items = JSON.parse(JSON.stringify(applyFilters(db[collection] ?? [], filters)))
 
                 return {
                     data: perPage === 0 ? items : items.slice(
@@ -266,7 +266,7 @@ const createFileAdapter = (path) => {
                 await init()
                 let items = applyFilters(db[collection] ?? [], filters)
 
-                return items[0] 
+                return JSON.parse(JSON.stringify(items[0]))
             }
 
             function filter(field, operator, value) {
@@ -284,7 +284,7 @@ const createFileAdapter = (path) => {
 
                 let items = applyFilters(db[collection] ?? [], filters)
 
-                return items
+                return JSON.parse(JSON.stringify(items))
             }
 
             return {
@@ -305,7 +305,7 @@ const createFileAdapter = (path) => {
             if (index !== -1) {
                 db[collection][index] = { ...db[collection][index], ...data };
                 isDirty = true
-                return db[collection][index];
+                return JSON.parse(JSON.stringify(db[collection][index]));
             }
             return null;
         },
@@ -321,7 +321,7 @@ const createFileAdapter = (path) => {
                 const deleted = db[collection][index];
                 db[collection].splice(index, 1);
                 isDirty = true
-                return deleted;
+                return JSON.parse(JSON.stringify(deleted));
             }
             return null;
         }
