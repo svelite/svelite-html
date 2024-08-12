@@ -361,6 +361,9 @@ const createMongoAdapter = (uri, dbName) => {
                       case '=':
                           query[filter.field] = filter.value;
                           break;
+                      case 'in':
+                          query[filter.field]['$in'] = filter.value;
+                          break;
                       case '!=':
                           query[filter.field]['$ne'] = filter.value;
                           break;
@@ -504,6 +507,8 @@ function applyComparison(value, operator, compareValue) {
             return value === compareValue;
         case '!=':
             return value !== compareValue;
+        case 'in':
+            return compareValue.includes(value);
         case '<':
             return value < compareValue;
         case '<=':
