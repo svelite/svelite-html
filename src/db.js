@@ -266,7 +266,9 @@ const createFileAdapter = (path) => {
                 await init()
                 let items = applyFilters(db[collection] ?? [], filters)
 
-                return JSON.parse(JSON.stringify(items[0]))
+                if(items[0])
+                    return JSON.parse(JSON.stringify(items[0]))
+                return;
             }
 
             function filter(field, operator, value) {
@@ -508,7 +510,7 @@ function applyComparison(value, operator, compareValue) {
         case '!=':
             return value !== compareValue;
         case 'in':
-            return compareValue.includes(value);
+            return (compareValue??[]).includes(value);
         case '<':
             return value < compareValue;
         case '<=':
