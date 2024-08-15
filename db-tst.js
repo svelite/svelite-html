@@ -14,7 +14,7 @@ await db('test2').insert({name: 'Hadi', username: 'thehadiahmadi', age: 43, path
 await db('test2').insert({name: 'Other', username: 'theother', age: 20, path: '/image.jpg'})
 
 
-const res = await db('test2').query().filter('name', 'in', ['Other', 'Hadi']).paginate()
+const res = await db('test2').query().filter('name', 'in', ['Other', 'Hadi']).filter('name', 'like', 't').paginate()
 // const res = await db('test2').query({
 //     filters: [
 //         {field: 'name', operator: '!=', value: 'Other'},

@@ -1,4 +1,4 @@
-type FilterOperators = "=" | '!=' | '>' | '>=' | '<' | '<='
+type FilterOperators = "=" | '!=' | '>' | '>=' | '<' | '<=' | 'in' | 'like'
 type QueryFilters = { field: string, operator: FilterOperators, value: any}
  
 type QueryPaginatedResult<T> = { page: number, perPage: number, total: number, data: T[] }

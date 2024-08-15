@@ -363,6 +363,9 @@ const createMongoAdapter = (uri, dbName) => {
                       case '=':
                           query[filter.field] = filter.value;
                           break;
+                      case 'like':
+                          query[filter.field] = new RegExp('.*' + filter.value + '.*', 'i')
+                          break;
                       case 'in':
                           query[filter.field]['$in'] = filter.value;
                           break;
@@ -507,6 +510,9 @@ function applyComparison(value, operator, compareValue) {
     switch (operator) {
         case '=':
             return value === compareValue;
+        case 'like':
+            console.log('like', compareValue, value, compareValue.indexOf(value) >=0)
+            return value.indexOf(compareValue) >=0
         case '!=':
             return value !== compareValue;
         case 'in':
