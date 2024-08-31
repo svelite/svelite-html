@@ -516,7 +516,12 @@ function applyComparison(value, operator, compareValue) {
         case '!=':
             return value !== compareValue;
         case 'in':
-            return (compareValue??[]).includes(value);
+            if(Array.isArray(value)) {
+                const hasIntersection = compareValue.some(item => value.includes(item));
+                return hasIntersection
+            } else {
+                return (compareValue??[]).includes(value);
+            }
         case '<':
             return value < compareValue;
         case '<=':
