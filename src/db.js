@@ -182,7 +182,7 @@ export function createMongoDb({uri, db}) {
                 return adapter.query(collectionName)
 			},
 			async insert(data) {
-                data._id ??= new UUID();
+                data._id ??= getId();
                 data.createdAt = new Date().valueOf()
                 data.updatedAt = 0
                 const result = await adapter.insert(collectionName, data);
@@ -483,11 +483,11 @@ const createMongoAdapter = (uri, dbName) => {
             const collection = db.collection(collectionName);
             
             await collection.findOneAndUpdate(
-                { _id: new UUID(id) },
+                { _id: id },
                 { $set: data },
             );
 
-            return {id: new UUID(id), ...data}
+            return {id: id, ...data}
             // return result.value;
         },
 
@@ -496,7 +496,7 @@ const createMongoAdapter = (uri, dbName) => {
 
             const collection = db.collection(collectionName);
             
-            const result = await collection.findOneAndDelete({ _id: new UUID(id) });
+            const result = await collection.findOneAndDelete({ _id: id });
 
             return result.value;
         }
