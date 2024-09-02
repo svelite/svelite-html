@@ -366,8 +366,11 @@ const createMongoAdapter = (uri, dbName) => {
                       case 'like':
                           query[filter.field] = new RegExp('.*' + filter.value + '.*', 'i')
                           break;
-                      case 'in':
+                        case 'in':
                           query[filter.field]['$in'] = filter.value;
+                          break;
+                      case 'all':
+                          query[filter.field]['$all'] = filter.value;
                           break;
                       case '!=':
                           query[filter.field]['$ne'] = filter.value;
@@ -522,6 +525,13 @@ function applyComparison(value, operator, compareValue) {
             } else {
                 return (compareValue??[]).includes(value);
             }
+        case 'all':
+            for(let item of compareValue) {
+                if(!value.includes(item)) {
+                    return false
+                }
+            }
+            return value.length > 0
         case '<':
             return value < compareValue;
         case '<=':
