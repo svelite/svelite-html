@@ -526,12 +526,15 @@ function applyComparison(value, operator, compareValue) {
                 return (compareValue??[]).includes(value);
             }
         case 'all':
+            if(!Array.isArray(value) || value.length == 0) {
+                return false
+            }
             for(let item of compareValue) {
-                if(!value.includes(item)) {
+                if(!value?.includes(item)) {
                     return false
                 }
             }
-            return value.length > 0
+            return true
         case '<':
             return value < compareValue;
         case '<=':
