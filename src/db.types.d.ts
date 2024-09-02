@@ -13,7 +13,8 @@ type QueryType = {
     first: QueryFirstType, 
     all: QueryAllType, 
     paginate: QueryPaginateType
-    filter: QueryFilterType
+    filter: QueryFilterType,
+    filters: Array<{field: string, operator: FilterOperators, value: any}>
 }
 
 type DB = <T extends object>(collectionName: string) => {

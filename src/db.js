@@ -46,7 +46,8 @@ export function createMemoryDb(initialData = {}) {
                         filter,
                         all,
                         first,
-                        paginate
+                        paginate,
+                        filters
                     }
                 }
 
@@ -60,7 +61,8 @@ export function createMemoryDb(initialData = {}) {
                     all,
                     filter,
                     first,
-                    paginate
+                    paginate,
+                    filters
                 }
             },
             async insert(data) {
@@ -277,7 +279,8 @@ const createFileAdapter = (path) => {
                     filter,
                     all,
                     first,
-                    paginate
+                    paginate,
+                    filters
                 }
             }
 
@@ -293,7 +296,8 @@ const createFileAdapter = (path) => {
                 all,
                 filter,
                 first,
-                paginate
+                paginate,
+                filters
             }
         },
 
@@ -405,7 +409,8 @@ const createMongoAdapter = (uri, dbName) => {
                     filter,
                     all,
                     first,
-                    paginate
+                    paginate,
+                    filters
                 }
             }
 
@@ -471,7 +476,8 @@ const createMongoAdapter = (uri, dbName) => {
                 filter,
                 all,
                 first,
-                paginate
+                paginate,
+                filters
             }
 
         },
@@ -510,6 +516,7 @@ function applyFilters(items, filters) {
 }
 
 function applyComparison(value, operator, compareValue) {
+    if(!value) return false;
     switch (operator) {
         case '=':
             return value === compareValue;
