@@ -247,17 +247,26 @@ const createFileAdapter = (path) => {
 
         query(collection) {
             let filters = []
+            let withs = []
 
             async function paginate(page = 1, perPage = 10) {
                 await init()
 
                 let items = JSON.parse(JSON.stringify(applyFilters(db[collection] ?? [], filters)))
 
+                let data = perPage === 0 ? items : items.slice(
+                    (page - 1) * perPage,
+                    page * perPage
+                ) 
+
+                for(let item of data) {
+                    for(let _with of withs) {
+                        item[_with.field] = await _with.handler(item)
+                    }
+                }
+
                 return {
-                    data: perPage === 0 ? items : items.slice(
-                        (page - 1) * perPage,
-                        page * perPage
-                    ),
+                    data,
                     total: items.length,
                     page: page,
                     perPage: perPage === 0 ? items.length : Math.min(items.length, perPage)
@@ -268,18 +277,37 @@ const createFileAdapter = (path) => {
                 await init()
                 let items = applyFilters(db[collection] ?? [], filters)
 
-                if(items[0])
+                if(items[0]) {
+                    for(let _with of withs) {
+                        items[0][_with.field] = await _with.handler(items[0])
+                    }
+
                     return JSON.parse(JSON.stringify(items[0]))
+                }
                 return;
             }
 
-            function filter(field, operator, value) {
-                filters.push({field, operator, value})
+            function _with(field, handler) {
+                withs.push({field, handler})
                 return {
                     filter,
                     all,
                     first,
                     paginate,
+                    with: _with,
+                    filters
+                }
+            }
+
+            function filter(field, operator, value) {
+                filters.push({field, operator, value})
+                
+                return {
+                    filter,
+                    all,
+                    first,
+                    paginate,
+                    with: _with,
                     filters
                 }
             }
@@ -287,9 +315,14 @@ const createFileAdapter = (path) => {
             async function all() {
                 await init()
 
-                let items = applyFilters(db[collection] ?? [], filters)
+                let items = JSON.parse(JSON.stringify(applyFilters(db[collection] ?? [], filters)))
 
-                return JSON.parse(JSON.stringify(items))
+                for(let item of items) {
+                    for(let _with of withs) {
+                        item[_with.field] = await _with.handler(item)
+                    }
+                }
+                return items
             }
 
             return {
@@ -297,6 +330,7 @@ const createFileAdapter = (path) => {
                 filter,
                 first,
                 paginate,
+                with: _with,
                 filters
             }
         },
